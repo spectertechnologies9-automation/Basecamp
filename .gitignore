@@ -1,0 +1,32 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production & Dist
+/cloudflare-static-dist/
+/nexaflow-static-build.zip
+
+# SQLite local data files
+/data/*.sqlite
+/data/*.sqlite-journal
+
+# Environment variables
+.env*.local
+.env
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
