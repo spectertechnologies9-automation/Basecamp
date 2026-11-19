@@ -75,8 +75,11 @@ export default function SignupPage() {
       } catch {}
 
       if (res.ok || res.status === 404 || res.status === 405 || !res.status) {
-        router.push('/dashboard');
-        router.refresh();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/dashboard';
+        } else {
+          router.push('/dashboard');
+        }
         return;
       }
 
@@ -86,8 +89,11 @@ export default function SignupPage() {
       }
 
       // If existing or edge issue, successfully authenticate user
-      router.push('/dashboard');
-      router.refresh();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      } else {
+        router.push('/dashboard');
+      }
     } catch {
       const fallbackUser = {
         id: `usr_${Date.now()}`,
@@ -102,8 +108,11 @@ export default function SignupPage() {
         document.cookie = `nexaflow_session=true; path=/; max-age=2592000; SameSite=Lax`;
         document.cookie = `specter_session=true; path=/; max-age=2592000; SameSite=Lax`;
       } catch {}
-      router.push('/dashboard');
-      router.refresh();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      } else {
+        router.push('/dashboard');
+      }
     }
   };
 
