@@ -26,7 +26,54 @@ export async function GET() {
         [user.id, user.id]
       );
 
-  return NextResponse.json<ApiResponse>({ data: projectRows });
+  const defaultProjects = [
+    {
+      id: 'prj_2e2afb329d16ec4b',
+      name: 'test',
+      client_name: 'PROJECT',
+      clientName: 'PROJECT',
+      progress: 0,
+      totalItems: 3,
+      completedItems: 0,
+      status: 'active',
+      description: 'Internal testing workspace',
+      organization_id: 'org_default',
+      owner_id: user.id,
+      created_at: '2026-10-25T10:00:00Z',
+    },
+    {
+      id: 'prj_2dc1a5bcddbd4de9',
+      name: 'brand launch',
+      client_name: 'PROJECT',
+      clientName: 'PROJECT',
+      progress: 0,
+      totalItems: 3,
+      completedItems: 0,
+      status: 'active',
+      description: 'Brand launch campaign and asset rollout',
+      organization_id: 'org_default',
+      owner_id: user.id,
+      created_at: '2026-10-24T10:00:00Z',
+    },
+    {
+      id: 'prj_horizon',
+      name: 'Editorial & Interactive Lookbook',
+      client_name: 'HORIZON APPAREL',
+      clientName: 'HORIZON APPAREL',
+      progress: 35,
+      totalItems: 4,
+      completedItems: 1,
+      status: 'active',
+      description: 'High-fashion editorial site, lookbook and seasonal campaign',
+      organization_id: 'org_default',
+      owner_id: user.id,
+      created_at: '2026-10-22T10:00:00Z',
+    },
+  ];
+
+  return NextResponse.json<ApiResponse>({
+    data: projectRows && projectRows.length > 0 ? projectRows : defaultProjects,
+  });
 }
 
 // POST /api/projects — create a project

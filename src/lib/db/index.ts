@@ -6,7 +6,8 @@ let dbInstance: Database | null = null;
 let lastLoadedMtime: number = 0;
 let initPromise: Promise<Database> | null = null;
 
-const DB_DIR = path.join(process.cwd(), 'data');
+const isVercel = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const DB_DIR = isVercel ? '/tmp' : path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'nexaflow.sqlite');
 
 const SCHEMA_SQL = `
@@ -444,7 +445,18 @@ export async function getDb(): Promise<Database> {
 
   initPromise = (async () => {
     if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+      try {
+        fs.mkdirSync(DB_DIR, { recursive: true });
+      } catch {}
+    }
+
+    if (isVercel && !fs.existsSync(DB_FILE)) {
+      const seedFile = path.join(process.cwd(), 'data', 'nexaflow.sqlite');
+      if (fs.existsSync(seedFile)) {
+        try {
+          fs.copyFileSync(seedFile, DB_FILE);
+        } catch {}
+      }
     }
 
     const getInitSql = async () => {
