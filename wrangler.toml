@@ -1,8 +1,0 @@
-name = "nexaflow"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
-
-# Cloudflare Pages Configuration for NexaFlow
-# Build command: npx @cloudflare/next-on-pages
-# Output directory: .vercel/output/static

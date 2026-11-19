@@ -12,8 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js",
-    "pages:build": "npx @cloudflare/next-on-pages"
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@google/genai": "^2.3.0",
@@ -83,8 +82,6 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.7",
-    "wrangler": "^3.88.0",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",
