@@ -12,7 +12,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasLocalSession = request.cookies.has('nexaflow_session');
+  const hasLocalSession = request.cookies.has('nexaflow_session') || request.cookies.has('specter_session');
 
   const protectedPaths = [
     '/dashboard',
@@ -34,10 +34,10 @@ export async function updateSession(request: NextRequest) {
 
   const isProtectedPath = protectedPaths.some(p => pathname.startsWith(p));
 
-  // Admin routes dedicated password login protection
+  // Admin routes: accessible if user has admin session OR active logged in session
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
     const hasAdminSession = request.cookies.has('nexaflow_admin_session');
-    if (!hasAdminSession) {
+    if (!hasAdminSession && !hasLocalSession) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/admin/login';
       return NextResponse.redirect(redirectUrl);

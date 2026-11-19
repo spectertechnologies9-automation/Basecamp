@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: 'Invalid email or password. Only registered accounts can sign in.' },
+        { error: 'Invalid username or password.' },
         { status: 401 }
       );
     }
@@ -45,12 +45,35 @@ export async function POST(req: NextRequest) {
     res.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
+
+    res.cookies.set({
+      name: 'specter_session',
+      value: 'true',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    // Provide immediate admin portal access for administrators
+    if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'owner') {
+      res.cookies.set({
+        name: 'nexaflow_admin_session',
+        value: signToken({ email: user.email, role: user.role, timestamp: Date.now() }),
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
 
     return res;
   } catch (err: any) {

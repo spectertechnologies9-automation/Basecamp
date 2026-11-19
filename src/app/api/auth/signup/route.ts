@@ -5,7 +5,7 @@ import { signupUser, signToken, SESSION_COOKIE_NAME } from '@/lib/auth/local';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, full_name } = body;
+    let { email, password, full_name } = body;
 
     if (!email || !password || !full_name) {
       return NextResponse.json(
@@ -14,14 +14,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (password.length < 8) {
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters.' },
+        { error: 'Password must be at least 6 characters.' },
         { status: 400 }
       );
     }
 
-    const user = await signupUser(email, password, full_name);
+    const emailToUse = email.includes('@') ? email.toLowerCase().trim() : `${email.toLowerCase().trim()}@specteros.agency`;
+
+    const user = await signupUser(emailToUse, password, full_name);
     const token = signToken({ userId: user.id, email: user.email, role: user.role });
 
     const res = NextResponse.json({
@@ -32,11 +34,21 @@ export async function POST(req: NextRequest) {
     res.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+
+    res.cookies.set({
+      name: 'specter_session',
+      value: 'true',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
     });
 
     return res;

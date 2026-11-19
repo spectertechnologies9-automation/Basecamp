@@ -632,7 +632,10 @@ export async function getDb(): Promise<Database> {
       const count = userCount[0]?.values[0]?.[0] as number;
       if (!count || count === 0) {
         const now = new Date().toISOString();
-        const defaultHash = '836f261323a28ad1:4b5b7582c61e06fa99e5a1b32d2df9ad797d81a986c757c29e2f47c3e3871987556950ee0b938f325609ffb737fe7847c0a6bbfd0c3be699d799f018eec3d758';
+        const superHash = 'f46240666399b3140f38801b79506fc8:51142b52c7bab3e30cfe58596f5d15bf4c3e397d90d7b60e68dee1b0cf344537c9288a3d87e2ff2c7ae771d3bd61e7a5650a68b3aa02ba42f943a0bf80c2ce5b';
+        const adminHash = '81ec2152b4c96b450a704c05ac1e42da:19daafda5b1ac23a703068403749f009d2b9d4d34f246239732a8a9d53851c6fa5fd1d2226e2c6f902acb3b12708ddec496788b8e0e85ea0c030a3214e45a800';
+        const memberHash = 'b8b509a6a6aa27072fb476fff62a73d8:d0598161381af4c640f76d9c4e830174a1ed497875f712cc3ce69b620b42dab47cf9f09df8658c86f7c276f97a87a07e6fb354d02989b815c797a217236db90b';
+        const clientHash = 'c023055b802952ee52b6acbcd21f0c39:5e8c3e50275966ef430a7d81d554dff05fb037948c3bdc862fbe15fef124a7b46b8f5eab7ea37e985731b96d9a62653ab64352a779e059e279eea9bdddce2929';
         db.run(
           `INSERT OR REPLACE INTO users (id, organization_id, email, password_hash, full_name, role, timezone, is_active, created_at, updated_at)
            VALUES 
@@ -640,7 +643,7 @@ export async function getDb(): Promise<Database> {
            ('usr_admin', 'org_default', 'admin@specteros.agency', ?, 'Workspace Administrator', 'admin', 'Asia/Kolkata', 1, ?, ?),
            ('usr_member', 'org_default', 'member@specteros.agency', ?, 'Alex Rivera', 'member', 'Asia/Kolkata', 1, ?, ?),
            ('usr_client', 'org_default', 'client@specteros.agency', ?, 'Elena Rostova', 'client', 'Asia/Kolkata', 1, ?, ?)`,
-          [defaultHash, now, now, defaultHash, now, now, defaultHash, now, now, defaultHash, now, now]
+          [superHash, now, now, adminHash, now, now, memberHash, now, now, clientHash, now, now]
         );
         db.run(
           `INSERT OR REPLACE INTO organization_members (id, organization_id, user_id, role, created_at)
