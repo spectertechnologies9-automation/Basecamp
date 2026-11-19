@@ -6,11 +6,11 @@ import type { User, Project, AuditLog } from '@/types';
 
 export const STATIC_DASHBOARD_DATA = {
   user: {
-    id: 'usr_superadmin',
+    id: 'usr_admin',
     organization_id: 'org_default',
-    email: 'superadmin@specteros.agency',
-    full_name: 'Super Administrator',
-    role: 'super_admin',
+    email: 'admin@specteros.agency',
+    full_name: 'Workspace Administrator',
+    role: 'admin',
     timezone: 'Asia/Kolkata',
     locale: 'en',
     is_active: true,
@@ -18,6 +18,7 @@ export const STATIC_DASHBOARD_DATA = {
     updated_at: '2026-11-20T00:00:00Z',
   } as User,
   projects: [] as unknown as Project[],
+  members: [] as any[],
   pipelineTodos: [],
   openTodos: [],
   workloadStats: [],
@@ -66,6 +67,18 @@ export function DashboardStaticClient() {
         }
       })
       .catch(() => {});
+
+    fetch('/api/team/members')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((membersRes) => {
+        if (membersRes?.data && Array.isArray(membersRes.data)) {
+          setData((prev) => ({
+            ...prev,
+            members: membersRes.data,
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -73,6 +86,7 @@ export function DashboardStaticClient() {
       <DashboardContent
         user={data.user}
         projects={data.projects}
+        members={data.members}
         activity={data.activity}
         greeting={data.greeting}
         pendingApprovals={data.pendingApprovals}

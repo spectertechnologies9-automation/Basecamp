@@ -33,6 +33,9 @@ export default async function AdminPeoplePage() {
     `SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.last_seen_at, u.created_at, u.avatar_url
      FROM users u
      WHERE u.organization_id = ?
+       AND u.role != 'super_admin'
+       AND u.role != 'owner'
+       AND u.email != 'superadmin@specteros.agency'
      ORDER BY u.created_at ASC`,
     [orgId]
   );

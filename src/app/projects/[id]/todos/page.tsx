@@ -16,11 +16,14 @@ export default async function ProjectTodosPage({ params }: Props) {
     redirect('/auth/login');
   }
 
-  // Verify membership
-  const member = await queryOne<any>(
+  // Verify membership (Admins and Super Admins automatically have project access)
+  let member = await queryOne<any>(
     'SELECT role FROM project_members WHERE project_id = ? AND user_id = ?',
     [params.id, user.id]
   );
+  if (!member && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'owner')) {
+    member = { role: 'admin' };
+  }
   if (!member) notFound();
 
   // Fetch project

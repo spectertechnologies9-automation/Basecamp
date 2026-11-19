@@ -4,11 +4,11 @@ import { isSupabaseConfigured } from '@/lib/supabase/config';
 import type { User } from '@/types';
 
 export const DEFAULT_DEMO_USER: User = {
-  id: 'usr_superadmin',
+  id: 'usr_admin',
   organization_id: 'org_default',
-  email: 'superadmin@specteros.agency',
-  full_name: 'Super Administrator',
-  role: 'super_admin',
+  email: 'admin@specteros.agency',
+  full_name: 'Workspace Administrator',
+  role: 'admin',
   timezone: 'Asia/Kolkata',
   locale: 'en',
   is_active: true,

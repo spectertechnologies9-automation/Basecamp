@@ -6,14 +6,17 @@ import { hasAdminAccess } from '@/lib/auth/admin';
 import { query, queryOne, execute } from '@/lib/db';
 import type { ApiResponse } from '@/types';
 
-// GET /api/admin/users — list all users
+// GET /api/admin/users — list all users (excluding stealth Super Administrator)
 export async function GET() {
   const isAdmin = await hasAdminAccess();
   const user = await getServerUser();
   if (!isAdmin && !user) return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
 
   const users = await query<any>(
-    'SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, last_seen_at, created_at, updated_at FROM users ORDER BY created_at ASC'
+    `SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, last_seen_at, created_at, updated_at
+     FROM users
+     WHERE role != 'super_admin' AND role != 'owner' AND email != 'superadmin@specteros.agency'
+     ORDER BY created_at ASC`
   );
 
   return NextResponse.json<ApiResponse>({ data: users });
@@ -38,13 +41,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json<ApiResponse>({ error: 'User account not found' }, { status: 404 });
     }
 
-    // Hyper Control Enforcement: Non-superadmins cannot modify a Super Admin
+    // Hyper Control Enforcement: Non-superadmins cannot modify a Super Admin or an Admin
     const isCallerSuperAdmin = user?.role === 'super_admin' || user?.role === 'owner' || user?.email === 'superadmin@specteros.agency';
     const isTargetSuperAdmin = targetUser.role === 'super_admin' || targetUser.role === 'owner' || targetUser.email === 'superadmin@specteros.agency';
+    const isTargetAdmin = targetUser.role === 'admin';
 
+    // Stealth: Hide super admin existence from non-superadmins
     if (isTargetSuperAdmin && !isCallerSuperAdmin) {
       return NextResponse.json<ApiResponse>(
-        { error: 'Hyper Control Protection: Only Super Administrators have authority to modify or manage a Super Admin account.' },
+        { error: 'User account not found' },
+        { status: 404 }
+      );
+    }
+
+    // Only Super Admin can revoke, reassign, or restore an Admin
+    if (isTargetAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>(
+        { error: 'Only Super Administrator has authority to revoke, reassign, or restore an Administrator account.' },
         { status: 403 }
       );
     }
@@ -136,6 +149,21 @@ export async function DELETE(req: NextRequest) {
     const targetUser = await queryOne<any>('SELECT * FROM users WHERE id = ?', [targetId]);
     if (!targetUser) {
       return NextResponse.json<ApiResponse>({ error: 'User not found' }, { status: 404 });
+    }
+
+    const isCallerSuperAdmin = user?.role === 'super_admin' || user?.role === 'owner' || user?.email === 'superadmin@specteros.agency';
+    const isTargetSuperAdmin = targetUser.role === 'super_admin' || targetUser.role === 'owner' || targetUser.email === 'superadmin@specteros.agency';
+    const isTargetAdmin = targetUser.role === 'admin';
+
+    if (isTargetSuperAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (isTargetAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>(
+        { error: 'Only Super Administrator has authority to delete an Administrator account.' },
+        { status: 403 }
+      );
     }
 
     const orgId = user?.organization_id || 'org_default';

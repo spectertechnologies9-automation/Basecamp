@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -25,6 +25,22 @@ export function TeamDirectoryView({ initialMembers }: any) {
   const [inviteModal, setInviteModal] = useState(false);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Sync with real SQLite database on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/team/members')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (isMounted && json?.data && Array.isArray(json.data)) {
+          setMembers(json.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Form state
   const [fullName, setFullName] = useState('');

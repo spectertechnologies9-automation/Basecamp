@@ -642,6 +642,15 @@ export async function getDb(): Promise<Database> {
            ('usr_client', 'org_default', 'client@specteros.agency', ?, 'Elena Rostova', 'client', 'Asia/Kolkata', 1, ?, ?)`,
           [defaultHash, now, now, defaultHash, now, now, defaultHash, now, now, defaultHash, now, now]
         );
+        db.run(
+          `INSERT OR REPLACE INTO organization_members (id, organization_id, user_id, role, created_at)
+           VALUES 
+           ('mem_superadmin', 'org_default', 'usr_superadmin', 'super_admin', ?),
+           ('mem_admin', 'org_default', 'usr_admin', 'admin', ?),
+           ('mem_member', 'org_default', 'usr_member', 'member', ?),
+           ('mem_client', 'org_default', 'usr_client', 'client', ?)`,
+          [now, now, now, now]
+        );
         saveDb(db);
       }
     } catch {}

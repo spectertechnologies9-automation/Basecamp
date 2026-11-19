@@ -12,7 +12,10 @@ export async function GET() {
   if (!user) return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
 
   const members = await query<any>(
-    'SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, created_at, updated_at FROM users ORDER BY created_at ASC'
+    `SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, created_at, updated_at
+     FROM users
+     WHERE role != 'super_admin' AND role != 'owner' AND email != 'superadmin@specteros.agency'
+     ORDER BY created_at ASC`
   );
 
   // Compute contribution metrics for each member
@@ -61,6 +64,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json<ApiResponse>({ error: 'Full name and email are required' }, { status: 400 });
     }
 
+    // Never allow external or client UI to create a super_admin via member invite
+    const sanitizedRole = (role === 'super_admin' || role === 'owner') ? 'member' : role;
+
     const normEmail = email.toLowerCase().trim();
     const existing = await query<any>('SELECT id FROM users WHERE email = ?', [normEmail]);
     if (existing.length > 0) {
@@ -75,12 +81,12 @@ export async function POST(req: NextRequest) {
     await execute(
       `INSERT INTO users (id, organization_id, email, password_hash, full_name, role, timezone, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'Asia/Kolkata', 1, ?, ?)`,
-      [newUserId, orgId, normEmail, passwordHash, full_name.trim(), role, now, now]
+      [newUserId, orgId, normEmail, passwordHash, full_name.trim(), sanitizedRole, now, now]
     );
 
     await execute(
       'INSERT INTO organization_members (id, organization_id, user_id, role, created_at) VALUES (?, ?, ?, ?, ?)',
-      [`mem_${crypto.randomBytes(8).toString('hex')}`, orgId, newUserId, role, now]
+      [`mem_${crypto.randomBytes(8).toString('hex')}`, orgId, newUserId, sanitizedRole, now]
     );
 
     // Audit log
@@ -94,7 +100,7 @@ export async function POST(req: NextRequest) {
       organization_id: orgId,
       email: normEmail,
       full_name: full_name.trim(),
-      role,
+      role: sanitizedRole,
       timezone: 'Asia/Kolkata',
       is_active: 1,
       created_at: now,
@@ -132,9 +138,24 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json<ApiResponse>({ error: 'You cannot remove your own active account' }, { status: 400 });
     }
 
-    const targetUser = await query<any>('SELECT id, full_name FROM users WHERE id = ?', [targetId]);
+    const targetUser = await query<any>('SELECT id, full_name, role, email FROM users WHERE id = ?', [targetId]);
     if (!targetUser.length) {
       return NextResponse.json<ApiResponse>({ error: 'Member not found' }, { status: 404 });
+    }
+
+    const isCallerSuperAdmin = user.role === 'super_admin' || user.role === 'owner' || user.email === 'superadmin@specteros.agency';
+    const isTargetSuperAdmin = targetUser[0].role === 'super_admin' || targetUser[0].role === 'owner' || targetUser[0].email === 'superadmin@specteros.agency';
+
+    if (isTargetSuperAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>({ error: 'Member not found' }, { status: 404 });
+    }
+
+    const isTargetAdmin = targetUser[0].role === 'admin';
+    if (isTargetAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>(
+        { error: 'Only Super Administrator has authority to remove an Administrator account' },
+        { status: 403 }
+      );
     }
 
     const memberName = targetUser[0].full_name;

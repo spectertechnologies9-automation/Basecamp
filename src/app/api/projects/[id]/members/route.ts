@@ -11,7 +11,7 @@ interface Ctx {
 
 // Check if user is admin or project lead
 async function canManageProject(userId: string, userRole: string, projectId: string) {
-  if (userRole === 'admin' || userRole === 'owner') return true;
+  if (userRole === 'admin' || userRole === 'owner' || userRole === 'super_admin') return true;
   const leadMember = await queryOne<any>(
     "SELECT id FROM project_members WHERE project_id = ? AND user_id = ? AND (role = 'lead' OR role = 'owner')",
     [projectId, userId]
@@ -30,6 +30,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
      FROM project_members pm
      JOIN users u ON u.id = pm.user_id
      WHERE pm.project_id = ?
+       AND u.role != 'super_admin'
+       AND u.role != 'owner'
+       AND u.email != 'superadmin@specteros.agency'
      ORDER BY CASE pm.role WHEN 'owner' THEN 1 WHEN 'lead' THEN 2 WHEN 'member' THEN 3 ELSE 4 END ASC`,
     [params.id]
   );

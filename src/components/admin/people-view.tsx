@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, Mail, MoreHorizontal, UserCheck, UserX, Crown, Shield, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Mail, MoreHorizontal, UserCheck, UserX, Crown, Shield, User, KeyRound } from 'lucide-react';
 import { ROLE_LABELS, ROLE_HIERARCHY } from '@/lib/constants';
 import { formatTimeAgo } from '@/lib/utils';
 import type { UserRole } from '@/types';
@@ -40,9 +40,41 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
   const [memberList, setMemberList] = useState(initialMembers);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showInvite, setShowInvite] = useState(false);
+  const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<UserRole>('member');
+  const [invitePassword, setInvitePassword] = useState('Password123!');
   const [inviting, setInviting] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  // Sync with real SQLite database on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/admin/users')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (isMounted && json?.data && Array.isArray(json.data)) {
+          const mapped = json.data.map((u: any) => ({
+            id: `mem_${u.id}`,
+            role: u.role,
+            user: {
+              id: u.id,
+              full_name: u.full_name,
+              email: u.email,
+              avatar_url: u.avatar_url,
+              is_active: Boolean(u.is_active),
+              last_seen_at: u.last_seen_at,
+              created_at: u.created_at,
+            },
+          }));
+          setMemberList(mapped);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filtered = memberList.filter(m => {
     if (filter === 'active') return m.user.is_active;
@@ -114,22 +146,22 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
+    if (!inviteEmail.trim() || !inviteName.trim()) return;
     setInviting(true);
     try {
       const res = await fetch('/api/team/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: inviteEmail.split('@')[0],
+          full_name: inviteName.trim(),
           email: inviteEmail.trim(),
-          role: 'member',
-          password: 'Password123!',
+          role: inviteRole,
+          password: invitePassword || 'Password123!',
         }),
       });
       const json = await res.json();
       if (res.ok && json.data) {
-        setMemberList(prev => [
+        setMemberList((prev) => [
           ...prev,
           {
             id: `mem_${json.data.id}`,
@@ -143,13 +175,20 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
             },
           },
         ]);
-        setActionMsg(`Invitation and account created for ${json.data.email}`);
+        setActionMsg(`Account created for ${json.data.full_name} (${json.data.email})`);
         setTimeout(() => setActionMsg(null), 4000);
+        setInviteName('');
+        setInviteEmail('');
+        setInvitePassword('Password123!');
+        setShowInvite(false);
+      } else {
+        alert(json.error || 'Failed to create user');
       }
-    } catch {}
-    setInviting(false);
-    setInviteEmail('');
-    setShowInvite(false);
+    } catch {
+      alert('Network error creating user');
+    } finally {
+      setInviting(false);
+    }
   };
 
   return (
@@ -180,30 +219,77 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
 
       {/* Invite modal */}
       {showInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }}>
-          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: 'var(--nf-panel)', borderColor: 'var(--nf-border)' }}>
-            <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--nf-text)' }}>Invite team member</h2>
-            <div className="mb-4">
-              <label className="block text-sm mb-1.5" style={{ color: 'var(--nf-text-muted)' }}>Email address</label>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl" style={{ background: 'var(--nf-panel)', borderColor: 'var(--nf-border)' }}>
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--nf-text)' }}>Create &amp; Invite Member</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">Add a new user directly to the workspace database.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono mb-1 text-zinc-300">Full Name</label>
+              <input
+                type="text"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="e.g. Jordan Smith"
+                autoFocus
+                className="w-full px-3 py-2 rounded-xl text-xs outline-none bg-zinc-900 border border-zinc-700 text-zinc-100 focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono mb-1 text-zinc-300">Email Address</label>
               <input
                 type="email"
                 value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                placeholder="colleague@company.com"
-                autoFocus
-                className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--nf-card)', border: '1px solid var(--nf-border)', color: 'var(--nf-text)' }}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="jordan@specteros.agency"
+                className="w-full px-3 py-2 rounded-xl text-xs outline-none bg-zinc-900 border border-zinc-700 text-zinc-100 focus:border-emerald-500"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowInvite(false)} className="px-4 py-2 rounded-lg text-sm" style={{ color: 'var(--nf-text-muted)' }}>Cancel</button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-mono mb-1 text-zinc-300">Workspace Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as UserRole)}
+                  className="w-full px-3 py-2 rounded-xl text-xs outline-none bg-zinc-900 border border-zinc-700 text-zinc-100 cursor-pointer"
+                >
+                  <option value="admin">Administrator</option>
+                  <option value="project_manager">Team Lead</option>
+                  <option value="member">Member</option>
+                  <option value="client">Client</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono mb-1 text-zinc-300">Password</label>
+                <input
+                  type="text"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                  placeholder="Password123!"
+                  className="w-full px-3 py-2 rounded-xl text-xs outline-none bg-zinc-900 border border-zinc-700 text-zinc-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setShowInvite(false)}
+                className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleInvite}
-                disabled={inviting || !inviteEmail.trim()}
-                className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60"
+                disabled={inviting || !inviteEmail.trim() || !inviteName.trim()}
+                className="px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
                 style={{ background: 'var(--nf-accent)', color: '#0B1419' }}
               >
-                {inviting ? 'Sending…' : 'Send invite'}
+                {inviting ? 'Saving to Database…' : 'Create Account'}
               </button>
             </div>
           </div>
@@ -275,7 +361,6 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
                         }
                         className="bg-zinc-900 border border-zinc-700 text-xs rounded-lg px-2 py-1 text-zinc-200 font-mono outline-none cursor-pointer hover:border-orange-500 transition-colors"
                       >
-                        <option value="super_admin">Super Admin</option>
                         <option value="admin">Administrator</option>
                         <option value="project_manager">Team Lead</option>
                         <option value="member">Member</option>

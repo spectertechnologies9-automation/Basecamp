@@ -32,6 +32,11 @@ export function verifyAdminToken(token: string): { email: string } | null {
 
 export async function hasAdminAccess(): Promise<boolean> {
   try {
+    const user = await getServerUser();
+    if (user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'owner')) {
+      return true;
+    }
+
     const cookieStore = await cookies();
     const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
     if (!token) return false;
@@ -49,9 +54,9 @@ export async function verifyAdminCredentials(password: string): Promise<boolean>
     return true;
   }
 
-  // Also verify against the current logged in user if they have owner/admin role and correct password
+  // Also verify against the current logged in user if they have owner/admin/super_admin role and correct password
   const currentUser = await getServerUser();
-  if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+  if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin' || currentUser.role === 'super_admin')) {
     const userRow = await queryOne<any>('SELECT password_hash FROM users WHERE id = ?', [currentUser.id]);
     if (userRow?.password_hash) {
       const [salt, key] = userRow.password_hash.split(':');

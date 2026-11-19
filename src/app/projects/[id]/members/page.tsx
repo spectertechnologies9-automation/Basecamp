@@ -21,6 +21,9 @@ export default async function ProjectMembersPage({ params }: { params: { id: str
      FROM project_members pm
      JOIN users u ON u.id = pm.user_id
      WHERE pm.project_id = ?
+       AND u.role != 'super_admin'
+       AND u.role != 'owner'
+       AND u.email != 'superadmin@specteros.agency'
      ORDER BY pm.created_at ASC`,
     [params.id]
   );
