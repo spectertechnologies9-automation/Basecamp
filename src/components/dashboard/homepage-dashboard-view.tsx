@@ -34,6 +34,7 @@ interface HomepageDashboardViewProps {
   pipelineTodos?: any[];
   workloadStats?: any[];
   onNavigateToStudio?: () => void;
+  onSelectProject?: (projectId: string) => void;
 }
 
 export function HomepageDashboardView({
@@ -45,6 +46,7 @@ export function HomepageDashboardView({
   pipelineTodos = [],
   workloadStats = [],
   onNavigateToStudio,
+  onSelectProject,
 }: HomepageDashboardViewProps) {
   const router = useRouter();
   const { previewRole } = useRolePreview();
@@ -363,7 +365,13 @@ export function HomepageDashboardView({
                     <Link
                       key={project.id}
                       href={`/projects/${project.id}`}
-                      className="group block rounded-2xl bg-gradient-to-b from-zinc-900/90 via-zinc-900/60 to-zinc-950/90 border border-white/[0.08] p-4 hover:border-orange-500/40 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/60 transition-all duration-200 shadow-sm"
+                      onClick={(e) => {
+                        if (onSelectProject) {
+                          e.preventDefault();
+                          onSelectProject(project.id);
+                        }
+                      }}
+                      className="group block rounded-2xl bg-gradient-to-b from-zinc-900/90 via-zinc-900/60 to-zinc-950/90 border border-white/[0.08] p-4 hover:border-orange-500/40 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/60 transition-all duration-200 shadow-sm cursor-pointer"
                     >
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400 font-semibold truncate">

@@ -179,6 +179,7 @@ interface ProjectDashboardProps {
   todos?: any[];
   activity: AuditLog[];
   initialTool?: ProjectToolId | 'settings' | 'team' | null;
+  onBack?: () => void;
 }
 
 export function ProjectDashboard({
@@ -188,6 +189,7 @@ export function ProjectDashboard({
   todos = [],
   activity = [],
   initialTool = null,
+  onBack,
 }: ProjectDashboardProps) {
   const router = useRouter();
   const { previewRole } = useRolePreview();
@@ -352,7 +354,7 @@ export function ProjectDashboard({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => (activeView ? setActiveView(null) : router.push('/projects'))}
+          onClick={() => (activeView ? setActiveView(null) : onBack ? onBack() : router.push('/'))}
           className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all duration-200 hover:-translate-x-0.5 active:scale-95 group"
         >
           <ArrowLeft className="h-4 w-4 text-orange-400 group-hover:-translate-x-0.5 transition-transform" />

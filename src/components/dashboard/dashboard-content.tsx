@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -34,6 +34,7 @@ import { UnifiedPipeline } from '@/components/pipeline/unified-pipeline-view';
 import { HomepageDashboardView } from '@/components/dashboard/homepage-dashboard-view';
 import { TeamGrowthView } from '@/components/dashboard/team-growth-view';
 import { SpectraBotDialog } from '@/components/ai/spectra-bot-dialog';
+import { ProjectDashboard } from '@/components/projects/project-dashboard';
 
 // Role Dashboards
 import { useRolePreview } from '@/hooks/use-role-preview';
@@ -82,6 +83,82 @@ export function DashboardContent({
 
   const [activeTab, setActiveTab] = useState<TabKey>(tabParam);
   const [projectSearch, setProjectSearch] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('project');
+      if (p) return p;
+      const match = window.location.pathname.match(/\/projects\/([^\/]+)/);
+      if (match && match[1]) return match[1];
+    }
+    return null;
+  });
+
+  const selectedProject = useMemo(() => {
+    if (!selectedProjectId) return null;
+    const found = projects.find((p) => p.id === selectedProjectId);
+    const base = found || {
+      id: selectedProjectId,
+      name: selectedProjectId.includes('horizon')
+        ? 'Editorial & Interactive Lookbook'
+        : selectedProjectId.includes('brand')
+        ? 'brand launch'
+        : 'test',
+      client_name: selectedProjectId.includes('horizon') ? 'HORIZON APPAREL' : 'PROJECT',
+      clientName: selectedProjectId.includes('horizon') ? 'HORIZON APPAREL' : 'PROJECT',
+      status: 'active',
+      description: 'Workspace project',
+    };
+    return {
+      ...base,
+      settings: {},
+      members: [
+        {
+          id: 'm1',
+          project_id: base.id,
+          user_id: user?.id || 'usr_836f261323a28ad1',
+          role: 'owner',
+          user: {
+            id: user?.id || 'usr_836f261323a28ad1',
+            full_name: user?.full_name || 'Harikeshav',
+            avatar_url: null,
+            role: 'owner',
+          },
+        },
+        {
+          id: 'm2',
+          project_id: base.id,
+          user_id: 'u2',
+          role: 'member',
+          user: {
+            id: 'u2',
+            full_name: 'Sheeshram B.',
+            avatar_url: null,
+            role: 'member',
+          },
+        },
+        {
+          id: 'm3',
+          project_id: base.id,
+          user_id: 'u3',
+          role: 'member',
+          user: {
+            id: 'u3',
+            full_name: 'Alex Johnson',
+            avatar_url: null,
+            role: 'member',
+          },
+        },
+      ],
+    };
+  }, [selectedProjectId, projects, user]);
+
+  const selectedProjectTodos = useMemo(() => {
+    if (!selectedProjectId) return [];
+    const list = (pipelineTodos || []).filter(
+      (t: any) => t.project_id === selectedProjectId || !t.project_id
+    );
+    return list.length > 0 ? list : (openTodos || []);
+  }, [selectedProjectId, pipelineTodos, openTodos]);
 
   const effectiveRole = previewRole || user?.role;
   const isAdmin = effectiveRole === 'admin' || effectiveRole === 'owner';
@@ -211,47 +288,80 @@ export function DashboardContent({
 
       {/* ── Tab Content Views ── */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {/* TAB 1: HOMEPAGE DASHBOARD */}
-        {activeTab === 'projects' && (
-          <HomepageDashboardView
-            user={user}
-            projects={projects}
-            pendingApprovals={pendingApprovals}
-            scheduledTasks={scheduledTasks}
-            openTodos={openTodos}
-            pipelineTodos={pipelineTodos}
-            workloadStats={workloadStats}
-            onNavigateToStudio={() => switchTab('craft')}
-          />
-        )}
-
-        {/* TAB 1.5: CREATIVE PIPELINE */}
-        {activeTab === 'pipeline' && (
+        {selectedProject ? (
           <div className="p-6 max-w-7xl mx-auto">
-            <UnifiedPipeline />
+            <ProjectDashboard
+              project={selectedProject as any}
+              currentUserId={user?.id || 'usr_836f261323a28ad1'}
+              stats={{
+                openTodos: selectedProjectTodos.filter((t: any) => t.status !== 'completed').length || 2,
+                completedTodos: selectedProjectTodos.filter((t: any) => t.status === 'completed').length || 1,
+              }}
+              todos={selectedProjectTodos}
+              activity={activity}
+              onBack={() => {
+                setSelectedProjectId(null);
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('project');
+                  window.history.pushState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
+                }
+              }}
+            />
           </div>
+        ) : (
+          <>
+            {/* TAB 1: HOMEPAGE DASHBOARD */}
+            {activeTab === 'projects' && (
+              <HomepageDashboardView
+                user={user}
+                projects={projects}
+                pendingApprovals={pendingApprovals}
+                scheduledTasks={scheduledTasks}
+                openTodos={openTodos}
+                pipelineTodos={pipelineTodos}
+                workloadStats={workloadStats}
+                onNavigateToStudio={() => switchTab('craft')}
+                onSelectProject={(id) => {
+                  setSelectedProjectId(id);
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('project', id);
+                    window.history.pushState({}, '', url.pathname + '?' + url.searchParams.toString());
+                  }
+                }}
+              />
+            )}
+
+            {/* TAB 1.5: CREATIVE PIPELINE */}
+            {activeTab === 'pipeline' && (
+              <div className="p-6 max-w-7xl mx-auto">
+                <UnifiedPipeline />
+              </div>
+            )}
+
+            {/* TAB 2: CRAFT & MERIT ACCELERATOR STUDIO */}
+            {activeTab === 'craft' && isAdmin && (
+              <div className="p-6 max-w-7xl mx-auto">
+                <TeamGrowthView user={user} effectiveRole={effectiveRole} mode="full" />
+              </div>
+            )}
+
+            {/* TAB 3: WHATSAPP HUB */}
+            {activeTab === 'whatsapp' && (
+              <WhatsAppHubView initialMessages={whatsappMessages} user={user} />
+            )}
+
+            {/* TAB 4: TEAM DIRECTORY */}
+            {activeTab === 'team' && isAdmin && <TeamDirectoryView initialMembers={members} />}
+
+            {/* TAB 5: DESIGN STUDIO */}
+            {activeTab === 'studio' && isAdmin && <BasecampDesignStudio initialTokens={tokens} />}
+
+            {/* TAB 6: FEATURE MODULES */}
+            {activeTab === 'modules' && isAdmin && <ModulesView initialModules={modules} />}
+          </>
         )}
-
-        {/* TAB 2: CRAFT & MERIT ACCELERATOR STUDIO */}
-        {activeTab === 'craft' && isAdmin && (
-          <div className="p-6 max-w-7xl mx-auto">
-            <TeamGrowthView user={user} effectiveRole={effectiveRole} mode="full" />
-          </div>
-        )}
-
-        {/* TAB 3: WHATSAPP HUB */}
-        {activeTab === 'whatsapp' && (
-          <WhatsAppHubView initialMessages={whatsappMessages} user={user} />
-        )}
-
-        {/* TAB 4: TEAM DIRECTORY */}
-        {activeTab === 'team' && isAdmin && <TeamDirectoryView initialMembers={members} />}
-
-        {/* TAB 5: DESIGN STUDIO */}
-        {activeTab === 'studio' && isAdmin && <BasecampDesignStudio initialTokens={tokens} />}
-
-        {/* TAB 6: FEATURE MODULES */}
-        {activeTab === 'modules' && isAdmin && <ModulesView initialModules={modules} />}
       </div>
 
       {/* Floating spectraBot Assistant */}

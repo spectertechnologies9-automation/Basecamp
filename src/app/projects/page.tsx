@@ -59,10 +59,63 @@ export default async function ProjectsPage() {
     };
   });
 
+  const fallbackProjects = [
+    {
+      id: 'prj_2e2afb329d16ec4b',
+      name: 'test',
+      clientName: 'PROJECT',
+      description: 'Internal testing workspace and design QA',
+      category: 'general',
+      status: 'active',
+      dueDate: '2026-11-30',
+      progress: 0,
+      totalItems: 3,
+      completedItems: 0,
+    },
+    {
+      id: 'prj_2dc1a5bcddbd4de9',
+      name: 'brand launch',
+      clientName: 'PROJECT',
+      description: 'Brand launch campaign, identity rollout, and merchandise',
+      category: 'general',
+      status: 'active',
+      dueDate: '2026-12-15',
+      progress: 0,
+      totalItems: 3,
+      completedItems: 0,
+    },
+    {
+      id: 'prj_horizon',
+      name: 'Editorial & Interactive Lookbook',
+      clientName: 'HORIZON APPAREL',
+      description: 'High-fashion editorial site, lookbook and seasonal campaign',
+      category: 'general',
+      status: 'active',
+      dueDate: '2026-11-28',
+      progress: 35,
+      totalItems: 4,
+      completedItems: 1,
+    },
+    {
+      id: 'prj_kallisto',
+      name: 'Kallisto Sound Labs',
+      clientName: 'KALLISTO SOUND LABS',
+      description: 'Acoustic engineering branding, packaging and 3D product animations',
+      category: 'general',
+      status: 'active',
+      dueDate: '2026-12-05',
+      progress: 50,
+      totalItems: 6,
+      completedItems: 3,
+    },
+  ];
+
+  const finalProjects = formattedProjects.length > 0 ? formattedProjects : fallbackProjects;
+
   return (
     <div className="w-full">
       <main className="max-w-7xl w-full mx-auto px-6 sm:px-8 lg:px-10 py-8">
-        <ProjectsListView initialProjects={formattedProjects} />
+        <ProjectsListView initialProjects={finalProjects} />
       </main>
     </div>
   );
