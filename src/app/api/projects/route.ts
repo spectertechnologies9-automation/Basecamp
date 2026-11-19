@@ -12,8 +12,8 @@ export async function GET() {
     return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const isAdmin = user.role === 'admin' || user.role === 'owner';
-  const projectRows = isAdmin
+  const isPrivileged = user.role === 'super_admin' || user.role === 'admin' || user.role === 'owner';
+  const projectRows = isPrivileged
     ? await query<any>(
         "SELECT * FROM projects WHERE status != 'archived' AND status != 'deleted' ORDER BY created_at DESC"
       )
@@ -26,53 +26,8 @@ export async function GET() {
         [user.id, user.id]
       );
 
-  const defaultProjects = [
-    {
-      id: 'prj_2e2afb329d16ec4b',
-      name: 'test',
-      client_name: 'PROJECT',
-      clientName: 'PROJECT',
-      progress: 0,
-      totalItems: 3,
-      completedItems: 0,
-      status: 'active',
-      description: 'Internal testing workspace',
-      organization_id: 'org_default',
-      owner_id: user.id,
-      created_at: '2026-10-25T10:00:00Z',
-    },
-    {
-      id: 'prj_2dc1a5bcddbd4de9',
-      name: 'brand launch',
-      client_name: 'PROJECT',
-      clientName: 'PROJECT',
-      progress: 0,
-      totalItems: 3,
-      completedItems: 0,
-      status: 'active',
-      description: 'Brand launch campaign and asset rollout',
-      organization_id: 'org_default',
-      owner_id: user.id,
-      created_at: '2026-10-24T10:00:00Z',
-    },
-    {
-      id: 'prj_horizon',
-      name: 'Editorial & Interactive Lookbook',
-      client_name: 'HORIZON APPAREL',
-      clientName: 'HORIZON APPAREL',
-      progress: 35,
-      totalItems: 4,
-      completedItems: 1,
-      status: 'active',
-      description: 'High-fashion editorial site, lookbook and seasonal campaign',
-      organization_id: 'org_default',
-      owner_id: user.id,
-      created_at: '2026-10-22T10:00:00Z',
-    },
-  ];
-
   return NextResponse.json<ApiResponse>({
-    data: projectRows && projectRows.length > 0 ? projectRows : defaultProjects,
+    data: projectRows || [],
   });
 }
 
@@ -83,8 +38,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Only Admin or Owner can create a new project
-  if (user.role !== 'admin' && user.role !== 'owner') {
+  // Super Admin, Admin, or Owner can create a new project
+  const canCreate = user.role === 'super_admin' || user.role === 'admin' || user.role === 'owner';
+  if (!canCreate) {
     return NextResponse.json<ApiResponse>(
       { error: 'Only administrators can create projects' },
       { status: 403 }

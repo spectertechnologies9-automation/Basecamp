@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type AppRole = "admin" | "brand_manager" | "team_member" | "client";
+export type AppRole = "super_admin" | "admin" | "brand_manager" | "team_member" | "client";
 
 interface RolePreviewState {
   previewRole: AppRole | null;

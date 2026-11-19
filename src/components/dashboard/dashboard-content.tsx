@@ -96,61 +96,18 @@ export function DashboardContent({
   const selectedProject = useMemo(() => {
     if (!selectedProjectId) return null;
     const found = projects.find((p) => p.id === selectedProjectId);
-    const base = found || {
+    if (found) return found;
+    return {
       id: selectedProjectId,
-      name: selectedProjectId.includes('horizon')
-        ? 'Editorial & Interactive Lookbook'
-        : selectedProjectId.includes('brand')
-        ? 'brand launch'
-        : 'test',
-      client_name: selectedProjectId.includes('horizon') ? 'HORIZON APPAREL' : 'PROJECT',
-      clientName: selectedProjectId.includes('horizon') ? 'HORIZON APPAREL' : 'PROJECT',
+      name: 'Project Workspace',
+      client_name: 'CLIENT',
+      clientName: 'CLIENT',
       status: 'active',
       description: 'Workspace project',
-    };
-    return {
-      ...base,
       settings: {},
-      members: [
-        {
-          id: 'm1',
-          project_id: base.id,
-          user_id: user?.id || 'usr_836f261323a28ad1',
-          role: 'owner',
-          user: {
-            id: user?.id || 'usr_836f261323a28ad1',
-            full_name: user?.full_name || 'Harikeshav',
-            avatar_url: null,
-            role: 'owner',
-          },
-        },
-        {
-          id: 'm2',
-          project_id: base.id,
-          user_id: 'u2',
-          role: 'member',
-          user: {
-            id: 'u2',
-            full_name: 'Sheeshram B.',
-            avatar_url: null,
-            role: 'member',
-          },
-        },
-        {
-          id: 'm3',
-          project_id: base.id,
-          user_id: 'u3',
-          role: 'member',
-          user: {
-            id: 'u3',
-            full_name: 'Alex Johnson',
-            avatar_url: null,
-            role: 'member',
-          },
-        },
-      ],
+      members: [],
     };
-  }, [selectedProjectId, projects, user]);
+  }, [selectedProjectId, projects]);
 
   const selectedProjectTodos = useMemo(() => {
     if (!selectedProjectId) return [];
@@ -161,7 +118,7 @@ export function DashboardContent({
   }, [selectedProjectId, pipelineTodos, openTodos]);
 
   const effectiveRole = previewRole || user?.role;
-  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'owner';
+  const isAdmin = effectiveRole === 'super_admin' || effectiveRole === 'admin' || effectiveRole === 'owner';
 
   // Strictly gate admin-only tabs (craft, team, studio, modules)
   useEffect(() => {

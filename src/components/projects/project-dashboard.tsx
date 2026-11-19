@@ -150,15 +150,6 @@ export const ALL_PROJECT_TOOLS: ToolConfig[] = [
     color: 'text-cyan-400',
     countLabel: 'reports',
   },
-  {
-    id: 'whatsapp-automation',
-    label: 'WhatsApp Bot',
-    description: 'Real-time client alerts, bot notifications, and direct WhatsApp messaging (Admin & Team Lead)',
-    category: 'universal',
-    icon: MessagesSquare,
-    color: 'text-emerald-400',
-    countLabel: 'automations',
-  },
 ];
 
 const DEFAULT_BRANDING_TOOLS: ProjectToolId[] = [
@@ -169,7 +160,6 @@ const DEFAULT_BRANDING_TOOLS: ProjectToolId[] = [
   'communication-hub',
   'assets-hub',
   'analytics',
-  'whatsapp-automation',
 ];
 
 interface ProjectDashboardProps {
@@ -203,6 +193,7 @@ export function ProjectDashboard({
     (effectiveRole as string) === 'brand_manager' ||
     (effectiveRole as string) === 'lead';
   const isAdmin =
+    (effectiveRole as string) === 'super_admin' ||
     (effectiveRole as string) === 'admin' ||
     (effectiveRole as string) === 'owner' ||
     (currentUserMember?.role as string) === 'owner';

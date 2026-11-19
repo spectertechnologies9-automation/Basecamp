@@ -176,13 +176,36 @@ export function SpectraBotDialog({ projectId, userId }: { projectId?: string; us
     }
   };
 
-  const quickChips = [
-    { label: '📋 Task Breakdown', intent: 'task_breakdown', prompt: 'Provide a clear task breakdown by status and deadlines.' },
-    { label: '📅 Deadlines', intent: 'deadlines', prompt: 'What are our key project deadlines and upcoming milestones?' },
-    { label: '✉️ Draft Client Update', intent: 'client_update', prompt: 'Draft a polite and professional client progress update email.' },
-    { label: '⏰ Task Reminder Email', intent: 'task_reminder', prompt: 'Draft a polite task reminder email for an assigned team member.' },
-    { label: '🎯 Action Items', intent: 'action_items', prompt: 'What are the top recommended next action items for our sprint?' },
-  ];
+  const quickChips = (() => {
+    if (previewRole === 'super_admin') {
+      return [
+        { label: '🛡️ System Governance', intent: 'system_health', prompt: 'Provide a full system diagnostic, user permission summary, and project health audit.' },
+        { label: '📊 Executive Overview', intent: 'executive_audit', prompt: 'Summarize all active initiatives, team workload distribution, and admin actions.' },
+        { label: '👥 User Role Audit', intent: 'user_audit', prompt: 'Audit all user accounts, active roles, and administrator privileges.' },
+        { label: '🎯 High-Level Action Items', intent: 'action_items', prompt: 'What are the top strategic directives requiring executive intervention?' },
+      ];
+    }
+    if (previewRole === 'admin') {
+      return [
+        { label: '📋 Task Breakdown', intent: 'task_breakdown', prompt: 'Provide a clear task breakdown by status and deadlines.' },
+        { label: '📅 Deadlines', intent: 'deadlines', prompt: 'What are our key project deadlines and upcoming milestones?' },
+        { label: '✉️ Draft Client Update', intent: 'client_update', prompt: 'Draft a polite and professional client progress update email.' },
+        { label: '👥 Team Capacity', intent: 'capacity', prompt: 'Summarize current team workload and capacity bottlenecks.' },
+      ];
+    }
+    if (previewRole === 'client') {
+      return [
+        { label: '📦 Deliverables Summary', intent: 'deliverables', prompt: 'What deliverables are currently ready or pending my review?' },
+        { label: '📅 Milestone Schedule', intent: 'deadlines', prompt: 'What are the upcoming milestone target dates for our project?' },
+        { label: '✍️ Submit Review Note', intent: 'client_feedback', prompt: 'Help me summarize and submit my feedback for pending deliverables.' },
+      ];
+    }
+    return [
+      { label: '📋 My Tasks', intent: 'my_tasks', prompt: 'What are my assigned tasks, priorities, and upcoming due dates?' },
+      { label: '📅 Upcoming Deadlines', intent: 'deadlines', prompt: 'What deadlines are coming up for my assigned work?' },
+      { label: '🎯 Next Steps', intent: 'action_items', prompt: 'What are my recommended next action items for today?' },
+    ];
+  })();
 
   return (
     <>

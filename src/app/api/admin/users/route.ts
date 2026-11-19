@@ -38,6 +38,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json<ApiResponse>({ error: 'User account not found' }, { status: 404 });
     }
 
+    // Hyper Control Enforcement: Non-superadmins cannot modify a Super Admin
+    const isCallerSuperAdmin = user?.role === 'super_admin' || user?.role === 'owner' || user?.email === 'superadmin@specteros.agency';
+    const isTargetSuperAdmin = targetUser.role === 'super_admin' || targetUser.role === 'owner' || targetUser.email === 'superadmin@specteros.agency';
+
+    if (isTargetSuperAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>(
+        { error: 'Hyper Control Protection: Only Super Administrators have authority to modify or manage a Super Admin account.' },
+        { status: 403 }
+      );
+    }
+
     const now = new Date().toISOString();
     const orgId = user?.organization_id || 'org_default';
     const actorId = user?.id || 'admin_gate';

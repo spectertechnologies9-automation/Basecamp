@@ -5,6 +5,14 @@ export function hasMinimumRole(userRole: UserRole, minimumRole: UserRole): boole
   return (ROLE_HIERARCHY[userRole] ?? 0) >= (ROLE_HIERARCHY[minimumRole] ?? 0);
 }
 
+export function isSuperAdmin(role: UserRole): boolean {
+  return role === 'super_admin' || role === 'owner';
+}
+
+export function canManageAdmins(role: UserRole): boolean {
+  return isSuperAdmin(role);
+}
+
 export function canManageOrganization(role: UserRole): boolean {
   return hasMinimumRole(role, 'admin');
 }

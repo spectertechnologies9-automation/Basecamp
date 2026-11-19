@@ -41,6 +41,7 @@ import { formatTimeAgo } from '@/lib/utils';
 import { ROLE_LABELS } from '@/lib/constants';
 
 const roleLabels: Record<AppRole, string> = {
+  super_admin: 'Super Admin',
   admin: 'Admin',
   brand_manager: 'Team Lead',
   team_member: 'Team Member',
@@ -84,7 +85,17 @@ export function AppHeader() {
   useEffect(() => {
     fetchProfile();
     fetchNotifications();
-  }, []);
+
+    // Stealth login shortcut: Ctrl+Shift+L or Cmd+Shift+L
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        router.push('/auth/login');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
 
   const markAllRead = async () => {
     try {
@@ -108,8 +119,9 @@ export function AppHeader() {
   const isHome = pathname === '/' || pathname === '/dashboard';
   const isProjects = pathname.startsWith('/projects');
 
-  // Strict role check: Only real Admins / Owners can swap roles in the UI
+  // Strict role check: Only real Super Admins / Admins / Owners can swap roles in the UI
   const isRealAdmin =
+    userProfile?.role === 'super_admin' ||
     userProfile?.role === 'admin' ||
     userProfile?.role === 'owner' ||
     userProfile?.email?.toLowerCase().includes('admin');
@@ -193,8 +205,8 @@ export function AppHeader() {
                 </div>
                 <DropdownMenuSeparator className="bg-zinc-800/80" />
                 {(Object.keys(roleLabels) as AppRole[]).map((r) => {
-                  const isSelected = (previewRole || 'admin') === r;
-                  const canCreate = r === 'admin' || r === 'brand_manager';
+                  const isSelected = (previewRole || (userProfile?.role === 'super_admin' ? 'super_admin' : 'admin')) === r;
+                  const canCreate = r === 'super_admin' || r === 'admin' || r === 'brand_manager';
                   return (
                     <DropdownMenuItem
                       key={r}
@@ -207,8 +219,8 @@ export function AppHeader() {
                         {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />}
                         {roleLabels[r]}
                       </span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded ${canCreate ? 'bg-zinc-800 text-zinc-300' : 'text-zinc-500'}`}>
-                        {canCreate ? 'CAN CREATE' : 'VIEW ONLY'}
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded ${r === 'super_admin' ? 'bg-orange-500/20 text-orange-300 font-bold' : canCreate ? 'bg-zinc-800 text-zinc-300' : 'text-zinc-500'}`}>
+                        {r === 'super_admin' ? 'HYPER CONTROL' : canCreate ? 'CAN CREATE' : 'VIEW ONLY'}
                       </span>
                     </DropdownMenuItem>
                   );

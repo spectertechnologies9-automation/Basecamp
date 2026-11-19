@@ -50,7 +50,7 @@ export function ProjectsListView({ initialProjects }: { initialProjects: Project
 
   const { previewRole } = useRolePreview();
   const effectiveRole = previewRole || 'admin';
-  const canCreateProject = effectiveRole === 'admin' || (effectiveRole as string) === 'owner';
+  const canCreateProject = effectiveRole === 'super_admin' || effectiveRole === 'admin' || (effectiveRole as string) === 'owner';
 
   const pinnedCount = projects.filter((p) => p.isPinned).length;
 

@@ -12,54 +12,62 @@ export const metadata: Metadata = { title: 'Calendar' };
 
 export default async function CalendarPage() {
   const user = (await getServerUser()) || {
-    id: 'usr_836f261323a28ad1',
-    role: 'owner',
-    full_name: 'Harikeshav',
-    email: 'harikeshav@specteros.agency',
+    id: 'usr_superadmin',
+    role: 'super_admin',
+    full_name: 'Super Administrator',
+    email: 'superadmin@specteros.agency',
   };
 
-  const isAdmin = user.role === 'admin' || user.role === 'owner';
+  const isPrivileged = user.role === 'super_admin' || user.role === 'admin' || user.role === 'owner';
 
-  // Fetch accessible projects for task/event scheduling
-  const projects = isAdmin
-    ? await query<any>('SELECT id, name FROM projects ORDER BY name ASC')
-    : await query<any>(
-        `SELECT DISTINCT p.id, p.name FROM projects p
-         LEFT JOIN project_members pm ON pm.project_id = p.id
-         WHERE pm.user_id = ? OR p.owner_id = ?
-         ORDER BY p.name ASC`,
-        [user.id, user.id]
-      );
+  let projects: any[] = [];
+  let eventRows: any[] = [];
+  let todoRows: any[] = [];
 
-  // Fetch calendar events
-  const eventRows = await query<any>(
-    isAdmin
-      ? `SELECT * FROM calendar_events ORDER BY start_at ASC`
-      : `SELECT * FROM calendar_events 
-         WHERE created_by = ? OR participant_ids LIKE ?
-         ORDER BY start_at ASC`,
-    isAdmin ? [] : [user.id, `%"${user.id}"%`]
-  );
+  try {
+    // Fetch accessible projects for task/event scheduling
+    projects = isPrivileged
+      ? await query<any>('SELECT id, name FROM projects ORDER BY name ASC')
+      : await query<any>(
+          `SELECT DISTINCT p.id, p.name FROM projects p
+           LEFT JOIN project_members pm ON pm.project_id = p.id
+           WHERE pm.user_id = ? OR p.owner_id = ?
+           ORDER BY p.name ASC`,
+          [user.id, user.id]
+        );
 
-  // Fetch todos with due dates to show on calendar
-  const todoRows = await query<any>(
-    isAdmin
-      ? `SELECT t.id, t.title, t.due_date as start_at, t.priority, t.status, p.name as project_name, p.color as project_color
-         FROM todos t
-         JOIN projects p ON p.id = t.project_id
-         WHERE t.due_date IS NOT NULL
-         ORDER BY t.due_date ASC`
-      : `SELECT t.id, t.title, t.due_date as start_at, t.priority, t.status, p.name as project_name, p.color as project_color
-         FROM todos t
-         JOIN projects p ON p.id = t.project_id
-         WHERE (t.created_by = ? OR t.assignee_ids LIKE ?)
-           AND t.due_date IS NOT NULL
-         ORDER BY t.due_date ASC`,
-    isAdmin ? [] : [user.id, `%"${user.id}"%`]
-  );
+    // Fetch calendar events
+    eventRows = await query<any>(
+      isPrivileged
+        ? `SELECT * FROM calendar_events ORDER BY start_at ASC`
+        : `SELECT * FROM calendar_events 
+           WHERE created_by = ? OR participant_ids LIKE ?
+           ORDER BY start_at ASC`,
+      isPrivileged ? [] : [user.id, `%"${user.id}"%`]
+    );
+
+    // Fetch todos with due dates to show on calendar
+    todoRows = await query<any>(
+      isPrivileged
+        ? `SELECT t.id, t.title, t.due_date as start_at, t.priority, t.status, p.name as project_name, p.color as project_color
+           FROM todos t
+           JOIN projects p ON p.id = t.project_id
+           WHERE t.due_date IS NOT NULL
+           ORDER BY t.due_date ASC`
+        : `SELECT t.id, t.title, t.due_date as start_at, t.priority, t.status, p.name as project_name, p.color as project_color
+           FROM todos t
+           JOIN projects p ON p.id = t.project_id
+           WHERE (t.created_by = ? OR t.assignee_ids LIKE ?)
+             AND t.due_date IS NOT NULL
+           ORDER BY t.due_date ASC`,
+      isPrivileged ? [] : [user.id, `%"${user.id}"%`]
+    );
+  } catch (err) {
+    console.warn('[CalendarPage DB notice]:', err);
+  }
 
   const combinedEvents = [
-    ...eventRows.map((e) => ({
+    ...(eventRows || []).map((e) => ({
       id: e.id,
       title: e.title,
       description: e.description,
@@ -69,7 +77,7 @@ export default async function CalendarPage() {
       type: 'event' as const,
       color: '#39C6AE',
     })),
-    ...todoRows.map((t) => ({
+    ...(todoRows || []).map((t) => ({
       id: `todo_${t.id}`,
       title: `[Task] ${t.title}`,
       description: `${t.project_name} (${t.status})`,

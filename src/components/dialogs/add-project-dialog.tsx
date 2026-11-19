@@ -20,7 +20,7 @@ interface AddProjectDialogProps {
 
 export function AddProjectDialog({ onProjectAdded, trigger }: AddProjectDialogProps) {
   const { previewRole } = useRolePreview();
-  const isAdmin = !previewRole || previewRole === 'admin' || (previewRole as string) === 'owner';
+  const isAdmin = !previewRole || previewRole === 'super_admin' || previewRole === 'admin' || (previewRole as string) === 'owner';
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');

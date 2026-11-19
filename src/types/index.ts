@@ -1,5 +1,5 @@
 // User & Auth
-export type UserRole = 'owner' | 'admin' | 'project_manager' | 'member' | 'client' | 'observer' | 'ai_agent' | 'role_not_assigned' | 'unassigned';
+export type UserRole = 'super_admin' | 'owner' | 'admin' | 'project_manager' | 'member' | 'client' | 'observer' | 'ai_agent' | 'role_not_assigned' | 'unassigned';
 
 export interface User {
   id: string;

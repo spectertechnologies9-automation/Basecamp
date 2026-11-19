@@ -52,7 +52,7 @@ export function HomepageDashboardView({
   const { previewRole } = useRolePreview();
   const effectiveRole = previewRole || user?.role || 'admin';
   const isClient = effectiveRole === 'client';
-  const canCreateProject = effectiveRole === 'admin' || effectiveRole === 'owner';
+  const canCreateProject = effectiveRole === 'super_admin' || effectiveRole === 'admin' || effectiveRole === 'owner';
 
   const firstName = user?.full_name?.split(' ')[0] || 'Member';
   const [projects, setProjects] = useState<any[]>(initialProjects);
@@ -62,7 +62,7 @@ export function HomepageDashboardView({
     effectiveRole === 'brand_manager' ||
     effectiveRole === 'lead' ||
     effectiveRole === 'team_lead';
-  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'owner';
+  const isAdmin = effectiveRole === 'super_admin' || effectiveRole === 'admin' || effectiveRole === 'owner';
 
   // Master Operations Workspace Tab: 'pipeline' | 'todos' | 'capacity'
   const [workflowTab, setWorkflowTab] = useState<'pipeline' | 'todos' | 'capacity'>('pipeline');

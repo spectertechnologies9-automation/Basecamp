@@ -29,22 +29,45 @@ export default function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'harikeshav@specteros.agency',
-      password: 'password123',
+      email: '',
+      password: '',
     },
   });
 
   const performLoginSuccess = (userEmail: string) => {
     try {
-      const demoUser = {
-        id: 'usr_836f261323a28ad1',
+      const lower = userEmail.toLowerCase();
+      let role: any = 'member';
+      let name = 'Team Member';
+      let id = 'usr_member';
+
+      if (lower.includes('superadmin')) {
+        role = 'super_admin';
+        name = 'Super Administrator';
+        id = 'usr_superadmin';
+      } else if (lower.includes('admin')) {
+        role = 'admin';
+        name = 'Workspace Administrator';
+        id = 'usr_admin';
+      } else if (lower.includes('client')) {
+        role = 'client';
+        name = 'Elena Rostova';
+        id = 'usr_client';
+      } else if (lower.includes('member')) {
+        role = 'member';
+        name = 'Alex Rivera';
+        id = 'usr_member';
+      }
+
+      const activeUser = {
+        id,
         organization_id: 'org_default',
         email: userEmail,
-        full_name: userEmail.includes('admin') ? 'Administrator' : 'Harikeshav',
-        role: userEmail.includes('admin') ? 'admin' : 'owner',
+        full_name: name,
+        role,
         timezone: 'Asia/Kolkata',
       };
-      localStorage.setItem('specter_user', JSON.stringify(demoUser));
+      localStorage.setItem('specter_user', JSON.stringify(activeUser));
       document.cookie = `specter_session=true; path=/; max-age=86400; SameSite=Lax`;
     } catch {}
 
@@ -68,7 +91,7 @@ export default function LoginPage() {
       }
 
       // If 404/405/offline (static GitHub Pages hosting)
-      if (res.status === 404 || res.status === 405 || !res.ok) {
+      if (res.status === 404 || res.status === 405) {
         performLoginSuccess(data.email);
         return;
       }
@@ -81,15 +104,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemo = (email: string, pass: string) => {
-    setValue('email', email);
-    setValue('password', pass);
-    performLoginSuccess(email);
-  };
-
   return (
     <div
-      className="rounded-xl p-8 border"
+      className="rounded-2xl p-8 border"
       style={{
         background: 'var(--nf-panel, #131E24)',
         borderColor: 'var(--nf-border, #35464E)',
@@ -97,45 +114,13 @@ export default function LoginPage() {
       }}
     >
       <div className="flex items-center gap-2 mb-1">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--nf-text, #F2F6F8)' }}>
+        <h1 className="text-xl font-bold font-sans tracking-tight" style={{ color: 'var(--nf-text, #F2F6F8)' }}>
           Welcome back
         </h1>
       </div>
-      <p className="text-sm mb-5" style={{ color: 'var(--nf-text-muted, #AAB8C0)' }}>
+      <p className="text-sm mb-6 font-sans" style={{ color: 'var(--nf-text-muted, #AAB8C0)' }}>
         Sign in to your SPECTER OS workspace
       </p>
-
-      {/* Demo Credentials Box */}
-      <div className="mb-5 p-3.5 rounded-lg border border-orange-500/20 bg-orange-500/5 text-xs">
-        <div className="flex items-center gap-2 font-semibold text-orange-400 mb-2">
-          <Zap size={14} />
-          <span>Demo Credentials (1-Click Login)</span>
-        </div>
-        <div className="space-y-1.5 font-mono text-[11px] text-zinc-300">
-          <div className="flex items-center justify-between">
-            <span>Email: <strong className="text-white">harikeshav@specteros.agency</strong></span>
-            <span className="text-zinc-500">Pass: <strong className="text-zinc-400">password123</strong></span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('harikeshav@specteros.agency', 'password123')}
-            className="py-1.5 px-2 rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 font-sans font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors border border-orange-500/30"
-          >
-            <UserCheck size={12} />
-            Sign in as Owner
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('admin@specteros.agency', 'password123')}
-            className="py-1.5 px-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-sans font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors border border-white/10"
-          >
-            <ShieldCheck size={12} />
-            Sign in as Admin
-          </button>
-        </div>
-      </div>
 
       {error && (
         <div

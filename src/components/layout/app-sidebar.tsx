@@ -92,17 +92,6 @@ export function AppSidebar({ className }: AppSidebarProps) {
           ))}
         </div>
       </nav>
-
-      {/* Discrete Admin Link at bottom */}
-      <div className="p-3 border-t" style={{ borderColor: 'var(--nf-border)' }}>
-        <Link
-          href="/admin/login"
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[var(--nf-text-muted)] hover:text-white hover:bg-white/5 transition-colors"
-        >
-          <ShieldAlert size={14} className="text-amber-400/80" />
-          <span>Admin Access Gate</span>
-        </Link>
-      </div>
     </aside>
   );
 }

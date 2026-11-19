@@ -7,7 +7,8 @@ export const DEFAULT_TIMEZONE = 'Asia/Kolkata';
 export const DEFAULT_LOCALE = 'en-IN';
 
 export const ROLE_LABELS: Record<string, string> = {
-  owner: 'Owner',
+  super_admin: 'Super Admin',
+  owner: 'Super Admin',
   admin: 'Administrator',
   project_manager: 'Team Lead',
   member: 'Member',
@@ -19,6 +20,7 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export const ROLE_HIERARCHY: Record<string, number> = {
+  super_admin: 120,
   owner: 100,
   admin: 80,
   project_manager: 60,

@@ -621,10 +621,30 @@ export async function getDb(): Promise<Database> {
     if (!orgCheck.length || !orgCheck[0].values.length) {
       db.run(
         "INSERT INTO organizations (id, name, slug, timezone, created_at) VALUES (?, ?, ?, ?, ?)",
-        ['org_default', 'NexaFlow Systems', 'nexaflow-systems', 'Asia/Kolkata', new Date().toISOString()]
+        ['org_default', 'SPECTER OS', 'specter-os', 'Asia/Kolkata', new Date().toISOString()]
       );
       saveDb(db);
     }
+
+    // Ensure default standard role users exist in clean database
+    try {
+      const userCount = db.exec("SELECT count(*) FROM users");
+      const count = userCount[0]?.values[0]?.[0] as number;
+      if (!count || count === 0) {
+        const now = new Date().toISOString();
+        const defaultHash = '836f261323a28ad1:4b5b7582c61e06fa99e5a1b32d2df9ad797d81a986c757c29e2f47c3e3871987556950ee0b938f325609ffb737fe7847c0a6bbfd0c3be699d799f018eec3d758';
+        db.run(
+          `INSERT OR REPLACE INTO users (id, organization_id, email, password_hash, full_name, role, timezone, is_active, created_at, updated_at)
+           VALUES 
+           ('usr_superadmin', 'org_default', 'superadmin@specteros.agency', ?, 'Super Administrator', 'super_admin', 'Asia/Kolkata', 1, ?, ?),
+           ('usr_admin', 'org_default', 'admin@specteros.agency', ?, 'Workspace Administrator', 'admin', 'Asia/Kolkata', 1, ?, ?),
+           ('usr_member', 'org_default', 'member@specteros.agency', ?, 'Alex Rivera', 'member', 'Asia/Kolkata', 1, ?, ?),
+           ('usr_client', 'org_default', 'client@specteros.agency', ?, 'Elena Rostova', 'client', 'Asia/Kolkata', 1, ?, ?)`,
+          [defaultHash, now, now, defaultHash, now, now, defaultHash, now, now, defaultHash, now, now]
+        );
+        saveDb(db);
+      }
+    } catch {}
 
     dbInstance = db;
     saveDbSync(db);
@@ -678,27 +698,41 @@ export function saveDbSync(db: Database = dbInstance!): void {
 }
 
 export async function query<T = any>(sqlStr: string, params: any[] = []): Promise<T[]> {
-  const db = await getDb();
-  const stmt = db.prepare(sqlStr);
-  if (params && params.length) {
-    stmt.bind(params);
+  try {
+    const db = await getDb();
+    const stmt = db.prepare(sqlStr);
+    if (params && params.length) {
+      stmt.bind(params);
+    }
+    const results: T[] = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject() as T);
+    }
+    stmt.free();
+    return results;
+  } catch (err) {
+    console.warn('[DB Query Error]:', err);
+    return [];
   }
-  const results: T[] = [];
-  while (stmt.step()) {
-    results.push(stmt.getAsObject() as T);
-  }
-  stmt.free();
-  return results;
 }
 
 export async function queryOne<T = any>(sqlStr: string, params: any[] = []): Promise<T | null> {
-  const rows = await query<T>(sqlStr, params);
-  return rows.length > 0 ? rows[0] : null;
+  try {
+    const rows = await query<T>(sqlStr, params);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (err) {
+    console.warn('[DB QueryOne Error]:', err);
+    return null;
+  }
 }
 
 export async function execute(sqlStr: string, params: any[] = []): Promise<void> {
-  const db = await getDb();
-  db.run(sqlStr, params);
-  saveDb(db);
-  saveDbSync(db);
+  try {
+    const db = await getDb();
+    db.run(sqlStr, params);
+    saveDb(db);
+    saveDbSync(db);
+  } catch (err) {
+    console.warn('[DB Execute Error]:', err);
+  }
 }

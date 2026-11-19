@@ -27,6 +27,7 @@ interface PeopleViewProps {
 }
 
 const ROLE_ICON: Record<string, React.FC<any>> = {
+  super_admin: Crown,
   owner: Crown,
   admin: Shield,
   project_manager: UserCheck,
@@ -274,12 +275,12 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
                         }
                         className="bg-zinc-900 border border-zinc-700 text-xs rounded-lg px-2 py-1 text-zinc-200 font-mono outline-none cursor-pointer hover:border-orange-500 transition-colors"
                       >
-                        <option value="role_not_assigned">Role Not Assigned</option>
-                        <option value="member">Member</option>
-                        <option value="project_manager">Team Lead</option>
+                        <option value="super_admin">Super Admin</option>
                         <option value="admin">Administrator</option>
+                        <option value="project_manager">Team Lead</option>
+                        <option value="member">Member</option>
                         <option value="client">Client</option>
-                        <option value="owner">Owner</option>
+                        <option value="role_not_assigned">Role Not Assigned</option>
                       </select>
                     </div>
                   </td>

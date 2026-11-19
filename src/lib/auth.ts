@@ -4,16 +4,16 @@ import { isSupabaseConfigured } from '@/lib/supabase/config';
 import type { User } from '@/types';
 
 export const DEFAULT_DEMO_USER: User = {
-  id: 'usr_836f261323a28ad1',
+  id: 'usr_superadmin',
   organization_id: 'org_default',
-  email: 'harikeshav@specteros.agency',
-  full_name: 'Harikeshav',
-  role: 'owner',
+  email: 'superadmin@specteros.agency',
+  full_name: 'Super Administrator',
+  role: 'super_admin',
   timezone: 'Asia/Kolkata',
   locale: 'en',
   is_active: true,
   created_at: '2026-10-22T10:00:00Z',
-  updated_at: '2026-11-18T00:00:00Z',
+  updated_at: '2026-11-20T00:00:00Z',
 };
 
 export async function getServerUser(): Promise<User | null> {

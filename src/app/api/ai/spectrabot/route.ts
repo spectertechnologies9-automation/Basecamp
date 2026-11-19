@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     const firstName = user.full_name?.split(' ')[0] || user.full_name || 'there';
-    const isGlobalAdmin = user.role === 'admin' || user.role === 'owner';
+    const isSuperAdmin = user.role === 'super_admin' || user.role === 'owner' || user.email === 'superadmin@specteros.agency';
+    const isGlobalAdmin = isSuperAdmin || user.role === 'admin';
 
     // 1. Fetch strictly accessible projects
     let projects: any[] = [];
@@ -50,9 +51,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (projects.length === 0) {
+      const emptyMsg = isSuperAdmin
+        ? `Hello ${firstName}. Your SPECTER OS workspace is online on a clean slate with zero active projects. As Super Administrator with Hyper-Control, you have complete authority over all workspace modules, administrators, and team members. You can spin up projects anytime with "+ New Project" or instruct me to plan your next initiative.`
+        : isGlobalAdmin
+        ? `Hello ${firstName}. Your workspace is active and currently has a clean slate with no active projects. You can create a new project anytime using the + New Project button in your dashboard or let me know what initiative you would like to spin up!`
+        : `Hello ${firstName}. You currently do not have any projects assigned to your account. Please reach out to your workspace administrator to get access.`;
+
       return NextResponse.json({
-        reply: `Hello ${firstName}. You currently do not have any projects assigned to your account. Please reach out to your team lead or administrator to get access.`,
+        reply: emptyMsg,
         accessibleProjectsCount: 0,
+        role: user.role,
       });
     }
 
@@ -194,7 +202,7 @@ export async function POST(req: NextRequest) {
     // 3. Prepare AI Routing payload
     const systemPrompt = `You are spectraBot, the refined executive AI assistant for SPECTER OS.
 Assisting: ${user.full_name} (${user.role.toUpperCase()}).
-Data Access Scoping: ${isGlobalAdmin ? 'GLOBAL ADMINISTRATOR' : isLeadOrAdmin ? 'PROJECT TEAM LEAD (Full project scope)' : isClient ? 'CLIENT (Deliverables & Approvals only)' : 'TEAM MEMBER (Strictly assigned tasks & uploaded assets)'}
+Data Access Scoping: ${isSuperAdmin ? 'SUPER ADMINISTRATOR (HYPER CONTROL: Full system governance, audit oversight, user management, project override)' : isGlobalAdmin ? 'WORKSPACE ADMINISTRATOR (Full operational scope)' : isLeadOrAdmin ? 'PROJECT TEAM LEAD (Full project scope)' : isClient ? 'CLIENT (Deliverables & Approvals only)' : 'TEAM MEMBER (Strictly assigned tasks & uploaded assets)'}
 
 DATA CONTEXT:
 ${JSON.stringify(datafile, null, 2)}
@@ -242,7 +250,17 @@ COMMUNICATION RULES:
     const openTasks = accessibleTasks.filter((t) => t.status !== 'completed' && t.status !== 'done');
     const targetProject = activeProjects[0] || { name: 'Workspace' };
 
-    if (isClient) {
+    if (isSuperAdmin) {
+      fallbackReply = `Hello ${firstName}. Here is your Super Administrator executive status:
+
+• Master Governance: Hyper-Control active across all system modules, administrators, and permissions.
+• Active Projects Tracked: ${activeProjects.length}
+• Total Tasks: ${accessibleTasks.length} (${openTasks.length} in progress)
+• Deliverables & Approvals: ${accessibleApprovals.length}
+• Upcoming Calendar Milestones: ${accessibleMilestones.length}
+
+All system services and security access controls are operating normally. What initiative or administrative action would you like to execute?`;
+    } else if (isClient) {
       const pendingItems = accessibleApprovals.filter((a) => a.status === 'pending_client_review');
       fallbackReply = `Hello ${firstName}. Here is the current review status for ${targetProject.name}:
 
