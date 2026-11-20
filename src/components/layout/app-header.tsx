@@ -56,8 +56,19 @@ export function AppHeader() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Authenticated user state
-  const [userProfile, setUserProfile] = useState<any>(null);
+  // Authenticated user state - lazy initialize from localStorage on client side
+  const [userProfile, setUserProfile] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('specter_user');
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u && (u.email || u.id)) return u;
+        }
+      } catch {}
+    }
+    return null;
+  });
   const [notifications, setNotifications] = useState<any[]>([]);
 
   const fetchProfile = async () => {
@@ -65,7 +76,9 @@ export function AppHeader() {
       const res = await fetch('/api/user/profile');
       if (res.ok) {
         const json = await res.json();
-        if (json.data) setUserProfile(json.data);
+        if (json.data && json.data.id) {
+          setUserProfile((prev: any) => ({ ...prev, ...json.data }));
+        }
       }
     } catch {}
   };
@@ -83,8 +96,27 @@ export function AppHeader() {
   };
 
   useEffect(() => {
+    // 1. Immediately read cached user from localStorage so header never flashes empty or wrong role
+    try {
+      const stored = localStorage.getItem('specter_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && (u.email || u.id)) {
+          setUserProfile(u);
+        }
+      }
+    } catch {}
+
     fetchProfile();
     fetchNotifications();
+
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('specter_user');
+        if (stored) setUserProfile(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
 
     // Stealth login shortcut: Ctrl+Shift+L or Cmd+Shift+L
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,7 +126,10 @@ export function AppHeader() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [router]);
 
   const markAllRead = async () => {
@@ -105,6 +140,13 @@ export function AppHeader() {
   };
 
   const handleSignOut = async () => {
+    try {
+      localStorage.removeItem('specter_user');
+      document.cookie = 'specter_user=; path=/; max-age=0;';
+      document.cookie = 'nexaflow_session=; path=/; max-age=0;';
+      document.cookie = 'specter_session=; path=/; max-age=0;';
+      document.cookie = 'nexaflow_admin_session=; path=/; max-age=0;';
+    } catch {}
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
@@ -190,7 +232,17 @@ export function AppHeader() {
               <DropdownMenuTrigger asChild>
                 <button className="hidden md:flex items-center gap-1.5 text-xs font-mono px-2.5 py-1.5 rounded-xl border border-zinc-800/80 bg-zinc-900/80 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/80 hover:-translate-y-0.5 active:scale-95 transition-all duration-200 uppercase tracking-wider shadow-sm">
                   <Shield className="h-3.5 w-3.5 text-violet-400" />
-                  <span>ROLE: {roleLabels[previewRole || 'admin'].toUpperCase()}</span>
+                  <span>
+                    ROLE:{' '}
+                    {(
+                      roleLabels[previewRole as AppRole] ||
+                      (userProfile?.role === 'super_admin'
+                        ? 'Super Admin'
+                        : roleLabels[userProfile?.role as AppRole]) ||
+                      userProfile?.role ||
+                      'ADMIN'
+                    ).toUpperCase()}
+                  </span>
                   <ChevronDown className="h-3 w-3 text-zinc-500" />
                 </button>
               </DropdownMenuTrigger>
@@ -225,14 +277,14 @@ export function AppHeader() {
                     </DropdownMenuItem>
                   );
                 })}
-                {previewRole && previewRole !== 'admin' && (
+                {previewRole && (
                   <>
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuItem
-                      onClick={() => setPreviewRole('admin')}
+                      onClick={() => setPreviewRole(null as any)}
                       className="gap-2 text-xs font-mono uppercase text-zinc-400 cursor-pointer rounded-xl hover:bg-zinc-800"
                     >
-                      <Shield className="h-3.5 w-3.5 text-violet-400" /> Reset to Admin
+                      <Shield className="h-3.5 w-3.5 text-violet-400" /> Reset to Real Role
                     </DropdownMenuItem>
                   </>
                 )}
@@ -241,7 +293,14 @@ export function AppHeader() {
           ) : (
             <div className="hidden md:flex items-center gap-1.5 text-xs font-mono px-2.5 py-1.5 rounded-xl border border-zinc-800/80 bg-zinc-900/80 text-zinc-300 uppercase tracking-wider">
               <Shield className="h-3.5 w-3.5 text-violet-400" />
-              <span>ROLE: {(userProfile?.role || 'member').toUpperCase()}</span>
+              <span>
+                ROLE:{' '}
+                {(
+                  (userProfile?.role === 'role_not_assigned' || !userProfile?.role)
+                    ? 'ROLE NOT ASSIGNED'
+                    : roleLabels[userProfile?.role as AppRole] || userProfile?.role || 'MEMBER'
+                ).toUpperCase()}
+              </span>
             </div>
           )}
 
@@ -328,7 +387,8 @@ export function AppHeader() {
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center text-xs font-mono shadow-sm">
-                    {userProfile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                    {userProfile?.full_name?.charAt(0).toUpperCase() ||
+                      (userProfile?.role === 'super_admin' ? 'S' : userProfile?.role === 'admin' ? 'A' : 'U')}
                   </div>
                 )}
               </button>
@@ -336,10 +396,21 @@ export function AppHeader() {
             <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-200 shadow-xl">
               <div className="px-3.5 py-2.5 border-b border-zinc-800">
                 <p className="text-xs font-bold text-white font-mono truncate">
-                  {userProfile?.display_name || userProfile?.full_name || 'Member'}
+                  {userProfile?.display_name ||
+                    userProfile?.full_name ||
+                    (userProfile?.role === 'super_admin'
+                      ? 'Super Administrator'
+                      : userProfile?.role === 'admin'
+                      ? 'Workspace Administrator'
+                      : 'Member')}
                 </p>
                 <p className="text-[10px] text-zinc-400 font-mono truncate">
-                  {userProfile?.email || 'user@nexaflow.local'}
+                  {userProfile?.email ||
+                    (userProfile?.role === 'super_admin'
+                      ? 'superadmin@specteros.agency'
+                      : userProfile?.role === 'admin'
+                      ? 'admin@specteros.agency'
+                      : 'user@nexaflow.local')}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <span
@@ -349,10 +420,13 @@ export function AppHeader() {
                         : 'bg-zinc-800 border-zinc-700 text-orange-400'
                     }`}
                   >
-                    {ROLE_LABELS[userProfile?.role] ||
-                      (userProfile?.role === 'role_not_assigned'
-                        ? 'Role Not Assigned'
-                        : userProfile?.role || 'Role Not Assigned')}
+                    {userProfile?.role === 'super_admin'
+                      ? 'SUPER ADMIN'
+                      : userProfile?.role === 'admin'
+                      ? 'ADMIN'
+                      : userProfile?.role === 'role_not_assigned' || !userProfile?.role
+                      ? 'ROLE NOT ASSIGNED'
+                      : ROLE_LABELS[userProfile?.role] || userProfile?.role || 'MEMBER'}
                   </span>
                 </div>
               </div>

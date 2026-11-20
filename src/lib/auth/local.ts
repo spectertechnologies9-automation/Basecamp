@@ -210,28 +210,70 @@ export async function getCurrentUser(): Promise<User | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) return null;
 
-    const payload = verifyToken<{ userId: string; email?: string; role?: any }>(token);
-    if (!payload?.userId) return null;
+    // 1. Check signed JWT token
+    if (token && token !== 'true') {
+      const payload = verifyToken<{ userId: string; email?: string; role?: any; name?: string }>(token);
+      if (payload?.userId) {
+        let user = await queryOne<User>(
+          'SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ? AND is_active = 1',
+          [payload.userId]
+        );
 
-    let user = await queryOne<User>(
-      'SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ? AND is_active = 1',
-      [payload.userId]
-    );
+        if (!user && payload.email) {
+          const now = new Date().toISOString();
+          try {
+            await execute(
+              `INSERT OR IGNORE INTO users (id, organization_id, email, password_hash, full_name, role, timezone, is_active, created_at, updated_at)
+               VALUES (?, 'org_default', ?, 'authenticated_session', ?, ?, 'Asia/Kolkata', 1, ?, ?)`,
+              [payload.userId, payload.email, payload.name || payload.email.split('@')[0], payload.role || 'member', now, now]
+            );
+          } catch {}
 
-    // If container restarted and user is in the valid signed session token, re-hydrate into SQLite
-    if (!user && payload.email) {
-      const now = new Date().toISOString();
-      await execute(
-        `INSERT OR IGNORE INTO users (id, organization_id, email, password_hash, full_name, role, timezone, is_active, created_at, updated_at)
-         VALUES (?, 'org_default', ?, 'authenticated_session', ?, ?, 'Asia/Kolkata', 1, ?, ?)`,
-        [payload.userId, payload.email, payload.email.split('@')[0], payload.role || 'member', now, now]
-      );
-      user = await queryOne<User>('SELECT * FROM users WHERE id = ?', [payload.userId]);
+          return {
+            id: payload.userId,
+            organization_id: 'org_default',
+            email: payload.email,
+            full_name: payload.name || payload.email.split('@')[0],
+            role: payload.role || 'member',
+            timezone: 'Asia/Kolkata',
+            locale: 'en',
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+          };
+        }
+
+        if (user) {
+          return { ...user, locale: (user as any).locale || 'en' };
+        }
+      }
     }
 
-    return user;
+    // 2. Check specter_user cookie as serverless state fallback
+    const userCookie = cookieStore.get('specter_user')?.value;
+    if (userCookie) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(userCookie));
+        if (parsed?.id && parsed?.email) {
+          const now = new Date().toISOString();
+          return {
+            id: parsed.id,
+            organization_id: parsed.organization_id || 'org_default',
+            email: parsed.email,
+            full_name: parsed.full_name || parsed.email.split('@')[0],
+            role: parsed.role || 'member',
+            timezone: parsed.timezone || 'Asia/Kolkata',
+            locale: parsed.locale || 'en',
+            is_active: true,
+            created_at: parsed.created_at || now,
+            updated_at: now,
+          };
+        }
+      } catch {}
+    }
+
+    return null;
   } catch {
     return null;
   }

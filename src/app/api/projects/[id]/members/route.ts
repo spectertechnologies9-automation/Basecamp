@@ -91,6 +91,20 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       );
     }
 
+    // Automatically assign or upgrade workspace role if user currently has role_not_assigned, or if workspace_role is specified
+    const targetUserRow = await queryOne<any>('SELECT role FROM users WHERE id = ?', [targetUserId]);
+    if (targetUserRow) {
+      const explicitWorkspaceRole = body.workspace_role;
+      if (explicitWorkspaceRole) {
+        await execute('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', [explicitWorkspaceRole, now, targetUserId]);
+        await execute('UPDATE organization_members SET role = ? WHERE user_id = ?', [explicitWorkspaceRole, targetUserId]);
+      } else if (targetUserRow.role === 'role_not_assigned' || targetUserRow.role === 'unassigned' || !targetUserRow.role) {
+        const assignedRole = role === 'lead' ? 'project_manager' : role === 'client' ? 'client' : 'member';
+        await execute('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', [assignedRole, now, targetUserId]);
+        await execute('UPDATE organization_members SET role = ? WHERE user_id = ?', [assignedRole, targetUserId]);
+      }
+    }
+
     const updated = await queryOne<any>(
       `SELECT pm.*, u.full_name, u.email, u.avatar_url
        FROM project_members pm

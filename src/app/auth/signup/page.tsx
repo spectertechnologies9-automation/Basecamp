@@ -70,6 +70,7 @@ export default function SignupPage() {
         registered.push(createdUser);
         localStorage.setItem('specter_registered_users', JSON.stringify(registered));
         localStorage.setItem('specter_user', JSON.stringify(createdUser));
+        document.cookie = `specter_user=${encodeURIComponent(JSON.stringify(createdUser))}; path=/; max-age=2592000; SameSite=Lax`;
         document.cookie = `nexaflow_session=true; path=/; max-age=2592000; SameSite=Lax`;
         document.cookie = `specter_session=true; path=/; max-age=2592000; SameSite=Lax`;
       } catch {}

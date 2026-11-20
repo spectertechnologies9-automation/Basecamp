@@ -96,6 +96,16 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 30,
     });
 
+    res.cookies.set({
+      name: 'specter_user',
+      value: encodeURIComponent(JSON.stringify(user)),
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
     // Provide immediate admin portal access for administrators
     if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'owner') {
       res.cookies.set({

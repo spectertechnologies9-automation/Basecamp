@@ -36,11 +36,40 @@ export function ProjectSettingsView({ project, canEdit }: any) {
 
   const fetchAllUsers = async () => {
     try {
+      let usersList: any[] = [];
       const res = await fetch('/api/team/members');
       if (res.ok) {
         const json = await res.json();
-        setAllUsers(json.data || []);
+        if (json.data && Array.isArray(json.data)) {
+          usersList = json.data;
+        }
       }
+
+      // Merge registered users from localStorage
+      try {
+        const stored = localStorage.getItem('specter_registered_users');
+        if (stored) {
+          const regList = JSON.parse(stored);
+          for (const reg of regList) {
+            if (
+              reg.role !== 'super_admin' &&
+              reg.email !== 'superadmin@specteros.agency' &&
+              !usersList.some((u) => u.id === reg.id || u.email?.toLowerCase() === reg.email?.toLowerCase())
+            ) {
+              usersList.push({
+                id: reg.id,
+                full_name: reg.full_name || reg.email.split('@')[0],
+                email: reg.email,
+                role: reg.role || 'role_not_assigned',
+              });
+            }
+          }
+        }
+      } catch {}
+
+      setAllUsers(
+        usersList.filter((u) => u.role !== 'super_admin' && u.email !== 'superadmin@specteros.agency')
+      );
     } catch {}
   };
 
@@ -111,14 +140,35 @@ export function ProjectSettingsView({ project, canEdit }: any) {
     if (!selectedAddUserId) return;
     setMemberLoading(true);
     try {
+      const targetUser = allUsers.find((u) => u.id === selectedAddUserId);
+      const isUnassigned = targetUser?.role === 'role_not_assigned' || !targetUser?.role;
+      const workspaceRole = isUnassigned ? (selectedAddRole === 'lead' ? 'project_manager' : selectedAddRole === 'client' ? 'client' : 'member') : undefined;
+
       const res = await fetch(`/api/projects/${project.id}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: selectedAddUserId, role: selectedAddRole }),
+        body: JSON.stringify({
+          user_id: selectedAddUserId,
+          role: selectedAddRole,
+          workspace_role: workspaceRole,
+        }),
       });
       if (res.ok) {
+        if (workspaceRole) {
+          try {
+            const stored = localStorage.getItem('specter_registered_users');
+            if (stored) {
+              const regList = JSON.parse(stored);
+              const updatedList = regList.map((u: any) =>
+                u.id === selectedAddUserId ? { ...u, role: workspaceRole } : u
+              );
+              localStorage.setItem('specter_registered_users', JSON.stringify(updatedList));
+            }
+          } catch {}
+        }
         setSelectedAddUserId('');
         fetchMembers();
+        fetchAllUsers();
       }
     } catch (e) {
       console.error(e);
@@ -305,6 +355,7 @@ export function ProjectSettingsView({ project, canEdit }: any) {
                   .map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.full_name} ({u.email})
+                      {u.role === 'role_not_assigned' || !u.role ? ' · [Needs Role]' : ''}
                     </option>
                   ))}
               </select>

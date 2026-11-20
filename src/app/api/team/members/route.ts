@@ -118,6 +118,57 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PATCH /api/team/members — update member role (Admin & Super Admin)
+export async function PATCH(req: NextRequest) {
+  const user = await getServerUser();
+  if (!user) return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
+
+  const isCallerSuperAdmin = user.role === 'super_admin' || user.role === 'owner' || user.email === 'superadmin@specteros.agency';
+  const isCallerAdmin = isCallerSuperAdmin || user.role === 'admin';
+
+  if (!isCallerAdmin) {
+    return NextResponse.json<ApiResponse>({ error: 'Only administrators can update roles' }, { status: 403 });
+  }
+
+  try {
+    const body = await req.json();
+    const { userId, role } = body;
+
+    if (!userId || !role) {
+      return NextResponse.json<ApiResponse>({ error: 'userId and role are required' }, { status: 400 });
+    }
+
+    const targetUser = await query<any>('SELECT id, full_name, email, role FROM users WHERE id = ?', [userId]);
+    if (!targetUser.length) {
+      return NextResponse.json<ApiResponse>({ error: 'User not found' }, { status: 404 });
+    }
+
+    const isTargetSuperAdmin = targetUser[0].role === 'super_admin' || targetUser[0].role === 'owner' || targetUser[0].email === 'superadmin@specteros.agency';
+    if (isTargetSuperAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>({ error: 'User not found' }, { status: 404 });
+    }
+
+    const isTargetAdmin = targetUser[0].role === 'admin';
+    if (isTargetAdmin && !isCallerSuperAdmin) {
+      return NextResponse.json<ApiResponse>(
+        { error: 'Only Super Administrator has authority to modify an Administrator account.' },
+        { status: 403 }
+      );
+    }
+
+    const now = new Date().toISOString();
+    await execute('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', [role, now, userId]);
+    await execute('UPDATE organization_members SET role = ? WHERE user_id = ?', [role, userId]);
+
+    return NextResponse.json<ApiResponse>({
+      message: `Role updated to ${role} for ${targetUser[0].full_name}`,
+      data: { id: userId, role },
+    });
+  } catch (err: any) {
+    return NextResponse.json<ApiResponse>({ error: err.message || 'Failed to update member role' }, { status: 500 });
+  }
+}
+
 // DELETE /api/team/members — remove team member
 export async function DELETE(req: NextRequest) {
   const user = await getServerUser();

@@ -10,6 +10,7 @@ export default async function NewProjectPage() {
   if (!user) redirect('/auth/login');
 
   const canCreate =
+    (user.role as string) === 'super_admin' ||
     user.role === 'project_manager' ||
     (user.role as string) === 'owner' ||
     (user.role as string) === 'admin' ||

@@ -85,6 +85,7 @@ export default function LoginPage() {
         timezone: 'Asia/Kolkata',
       };
       localStorage.setItem('specter_user', JSON.stringify(activeUser));
+      document.cookie = `specter_user=${encodeURIComponent(JSON.stringify(activeUser))}; path=/; max-age=2592000; SameSite=Lax`;
       document.cookie = `nexaflow_session=true; path=/; max-age=2592000; SameSite=Lax`;
       document.cookie = `specter_session=true; path=/; max-age=2592000; SameSite=Lax`;
       if (role === 'admin' || role === 'super_admin' || role === 'owner') {

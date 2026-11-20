@@ -4,15 +4,32 @@ import { queryOne, execute } from '@/lib/db';
 import type { ApiResponse } from '@/types';
 
 // GET /api/user/profile
-export async function GET() {
-  const user = await getServerUser();
+export async function GET(req: Request) {
+  let user = await getServerUser();
+
+  // Fallback to specter_user cookie if available
+  const cookieHeader = req.headers.get('cookie') || '';
+  const match = cookieHeader.match(/specter_user=([^;]+)/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(match[1]));
+      if (parsed?.id && parsed?.email) {
+        user = { ...user, ...parsed };
+      }
+    } catch {}
+  }
+
   if (!user) return NextResponse.json<ApiResponse>({ error: 'Unauthorized' }, { status: 401 });
 
-  const profile = await queryOne<any>(
-    'SELECT id, organization_id, email, full_name, display_name, bio, role, timezone, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ?',
-    [user.id]
-  );
-  return NextResponse.json<ApiResponse>({ data: profile });
+  let profile = null;
+  try {
+    profile = await queryOne<any>(
+      'SELECT id, organization_id, email, full_name, display_name, bio, role, timezone, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ?',
+      [user.id]
+    );
+  } catch {}
+
+  return NextResponse.json<ApiResponse>({ data: profile || user });
 }
 
 // PATCH /api/user/profile
