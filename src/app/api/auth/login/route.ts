@@ -25,8 +25,10 @@ export async function POST(req: NextRequest) {
       const lower = email.toLowerCase().trim();
       const SEED_LOOKUP: Record<string, any> = {
         'superadmin': { id: 'usr_superadmin', email: 'superadmin@specteros.agency', role: 'super_admin', full_name: 'Super Administrator' },
+        'super_admin': { id: 'usr_superadmin', email: 'superadmin@specteros.agency', role: 'super_admin', full_name: 'Super Administrator' },
         'superadmin@specteros.agency': { id: 'usr_superadmin', email: 'superadmin@specteros.agency', role: 'super_admin', full_name: 'Super Administrator' },
         'admin': { id: 'usr_admin', email: 'admin@specteros.agency', role: 'admin', full_name: 'Workspace Administrator' },
+        'administrator': { id: 'usr_admin', email: 'admin@specteros.agency', role: 'admin', full_name: 'Workspace Administrator' },
         'admin@specteros.agency': { id: 'usr_admin', email: 'admin@specteros.agency', role: 'admin', full_name: 'Workspace Administrator' },
         'member': { id: 'usr_member', email: 'member@specteros.agency', role: 'member', full_name: 'Alex Rivera' },
         'member@specteros.agency': { id: 'usr_member', email: 'member@specteros.agency', role: 'member', full_name: 'Alex Rivera' },

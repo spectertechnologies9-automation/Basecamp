@@ -47,28 +47,58 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
   const [inviting, setInviting] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
-  // Sync with real SQLite database on mount
+  // Sync with real SQLite database on mount + localStorage persistent registry
   useEffect(() => {
     let isMounted = true;
     fetch('/api/admin/users')
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
-        if (isMounted && json?.data && Array.isArray(json.data)) {
-          const mapped = json.data.map((u: any) => ({
-            id: `mem_${u.id}`,
-            role: u.role,
-            user: {
-              id: u.id,
-              full_name: u.full_name,
-              email: u.email,
-              avatar_url: u.avatar_url,
-              is_active: Boolean(u.is_active),
-              last_seen_at: u.last_seen_at,
-              created_at: u.created_at,
-            },
-          }));
-          setMemberList(mapped);
+        if (!isMounted) return;
+        let users: any[] = [];
+        if (json?.data && Array.isArray(json.data)) {
+          users = json.data;
         }
+
+        // Merge persistent registered users from localStorage
+        try {
+          const stored = localStorage.getItem('specter_registered_users');
+          if (stored) {
+            const registered = JSON.parse(stored);
+            for (const reg of registered) {
+              if (
+                reg.role !== 'super_admin' &&
+                reg.email !== 'superadmin@specteros.agency' &&
+                !users.some((u: any) => u.id === reg.id || u.email?.toLowerCase() === reg.email?.toLowerCase())
+              ) {
+                users.push({
+                  id: reg.id,
+                  full_name: reg.full_name || reg.email.split('@')[0],
+                  email: reg.email,
+                  role: reg.role || 'role_not_assigned',
+                  avatar_url: reg.avatar_url,
+                  is_active: reg.is_active !== false,
+                  last_seen_at: reg.last_seen_at,
+                  created_at: reg.created_at || new Date().toISOString(),
+                });
+              }
+            }
+          }
+        } catch {}
+
+        const mapped = users.map((u: any) => ({
+          id: `mem_${u.id}`,
+          role: u.role,
+          user: {
+            id: u.id,
+            full_name: u.full_name,
+            email: u.email,
+            avatar_url: u.avatar_url,
+            is_active: Boolean(u.is_active !== false),
+            last_seen_at: u.last_seen_at,
+            created_at: u.created_at,
+          },
+        }));
+        setMemberList(mapped);
       })
       .catch(() => {});
     return () => {
@@ -96,6 +126,13 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
         return;
       }
       setMemberList(prev => prev.map(m => m.user.id === userId ? { ...m, user: { ...m.user, is_active: false } } : m));
+      try {
+        const stored = localStorage.getItem('specter_registered_users');
+        if (stored) {
+          const reg = JSON.parse(stored).map((u: any) => u.id === userId ? { ...u, is_active: false } : u);
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        }
+      } catch {}
       setActionMsg(`Access revoked for ${userName}`);
       setTimeout(() => setActionMsg(null), 4000);
     } catch {
@@ -116,6 +153,13 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
         return;
       }
       setMemberList(prev => prev.map(m => m.user.id === userId ? { ...m, user: { ...m.user, is_active: true } } : m));
+      try {
+        const stored = localStorage.getItem('specter_registered_users');
+        if (stored) {
+          const reg = JSON.parse(stored).map((u: any) => u.id === userId ? { ...u, is_active: true } : u);
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        }
+      } catch {}
       setActionMsg(`Access restored for ${userName}`);
       setTimeout(() => setActionMsg(null), 4000);
     } catch {
@@ -138,6 +182,13 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
       setMemberList((prev) =>
         prev.map((m) => (m.user.id === userId ? { ...m, role: newRole } : m))
       );
+      try {
+        const stored = localStorage.getItem('specter_registered_users');
+        if (stored) {
+          const reg = JSON.parse(stored).map((u: any) => u.id === userId ? { ...u, role: newRole } : u);
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        }
+      } catch {}
       setActionMsg(`Assigned role ${ROLE_LABELS[newRole] || newRole} to ${userName}`);
       setTimeout(() => setActionMsg(null), 4000);
     } catch {
@@ -175,6 +226,20 @@ export function PeopleView({ members: initialMembers, currentUserId, orgId }: Pe
             },
           },
         ]);
+        try {
+          const stored = localStorage.getItem('specter_registered_users');
+          const reg = stored ? JSON.parse(stored) : [];
+          reg.push({
+            id: json.data.id,
+            full_name: json.data.full_name,
+            email: json.data.email,
+            role: json.data.role,
+            password: invitePassword || 'Password123!',
+            is_active: true,
+            created_at: json.data.created_at,
+          });
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        } catch {}
         setActionMsg(`Account created for ${json.data.full_name} (${json.data.email})`);
         setTimeout(() => setActionMsg(null), 4000);
         setInviteName('');

@@ -31,9 +31,9 @@ export function PersonalToolbar() {
       .catch(() => setLoaded(true));
   }, []);
 
-  // Effective role check: strictly gated to Admins / Owners only
+  // Effective role check: strictly gated to Admins / Super Admins / Owners
   const effectiveRole = previewRole || userProfile?.role;
-  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'owner';
+  const isAdmin = effectiveRole === 'super_admin' || effectiveRole === 'admin' || effectiveRole === 'owner';
 
   if (!loaded || !isAdmin) {
     return null;

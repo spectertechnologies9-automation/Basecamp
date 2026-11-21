@@ -40,12 +40,16 @@ import {
 import { formatTimeAgo } from '@/lib/utils';
 import { ROLE_LABELS } from '@/lib/constants';
 
-const roleLabels: Record<AppRole, string> = {
+const roleLabels: Record<string, string> = {
   super_admin: 'Super Admin',
   admin: 'Admin',
+  owner: 'Owner',
   brand_manager: 'Team Lead',
+  lead: 'Team Lead',
   team_member: 'Team Member',
+  member: 'Member',
   client: 'Client',
+  role_not_assigned: 'Role Not Assigned',
 };
 
 export function AppHeader() {
@@ -56,13 +60,20 @@ export function AppHeader() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Authenticated user state - lazy initialize from localStorage on client side
+  // Authenticated user state - initialize immediately from localStorage or cookie
   const [userProfile, setUserProfile] = useState<any>(() => {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('specter_user');
         if (stored) {
           const u = JSON.parse(stored);
+          if (u && (u.email || u.id)) return u;
+        }
+      } catch {}
+      try {
+        const cookieMatch = document.cookie.match(/specter_user=([^;]+)/);
+        if (cookieMatch) {
+          const u = JSON.parse(decodeURIComponent(cookieMatch[1]));
           if (u && (u.email || u.id)) return u;
         }
       } catch {}
@@ -142,10 +153,10 @@ export function AppHeader() {
   const handleSignOut = async () => {
     try {
       localStorage.removeItem('specter_user');
-      document.cookie = 'specter_user=; path=/; max-age=0;';
-      document.cookie = 'nexaflow_session=; path=/; max-age=0;';
-      document.cookie = 'specter_session=; path=/; max-age=0;';
-      document.cookie = 'nexaflow_admin_session=; path=/; max-age=0;';
+      document.cookie = 'specter_user=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+      document.cookie = 'nexaflow_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+      document.cookie = 'specter_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+      document.cookie = 'nexaflow_admin_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
     } catch {}
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -154,8 +165,12 @@ export function AppHeader() {
       const supabase = createClient();
       await supabase.auth.signOut();
     } catch {}
-    router.push('/auth/login');
-    router.refresh();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    } else {
+      router.push('/auth/login');
+      router.refresh();
+    }
   };
 
   const isHome = pathname === '/' || pathname === '/dashboard';
@@ -256,8 +271,9 @@ export function AppHeader() {
                   </p>
                 </div>
                 <DropdownMenuSeparator className="bg-zinc-800/80" />
-                {(Object.keys(roleLabels) as AppRole[]).map((r) => {
-                  const isSelected = (previewRole || (userProfile?.role === 'super_admin' ? 'super_admin' : 'admin')) === r;
+                {(['super_admin', 'admin', 'brand_manager', 'team_member', 'client'] as AppRole[]).map((r) => {
+                  const currentEffective = previewRole || (userProfile?.role === 'super_admin' ? 'super_admin' : 'admin');
+                  const isSelected = currentEffective === r;
                   const canCreate = r === 'super_admin' || r === 'admin' || r === 'brand_manager';
                   return (
                     <DropdownMenuItem
@@ -269,7 +285,7 @@ export function AppHeader() {
                     >
                       <span className="flex items-center gap-1.5">
                         {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />}
-                        {roleLabels[r]}
+                        {roleLabels[r] || r}
                       </span>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded ${r === 'super_admin' ? 'bg-orange-500/20 text-orange-300 font-bold' : canCreate ? 'bg-zinc-800 text-zinc-300' : 'text-zinc-500'}`}>
                         {r === 'super_admin' ? 'HYPER CONTROL' : canCreate ? 'CAN CREATE' : 'VIEW ONLY'}
@@ -298,7 +314,7 @@ export function AppHeader() {
                 {(
                   (userProfile?.role === 'role_not_assigned' || !userProfile?.role)
                     ? 'ROLE NOT ASSIGNED'
-                    : roleLabels[userProfile?.role as AppRole] || userProfile?.role || 'MEMBER'
+                    : roleLabels[userProfile?.role] || userProfile?.role || 'MEMBER'
                 ).toUpperCase()}
               </span>
             </div>
@@ -388,7 +404,11 @@ export function AppHeader() {
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center text-xs font-mono shadow-sm">
                     {userProfile?.full_name?.charAt(0).toUpperCase() ||
-                      (userProfile?.role === 'super_admin' ? 'S' : userProfile?.role === 'admin' ? 'A' : 'U')}
+                      (userProfile?.role === 'super_admin'
+                        ? 'S'
+                        : userProfile?.role === 'admin'
+                        ? 'A'
+                        : userProfile?.email?.charAt(0).toUpperCase() || 'U')}
                   </div>
                 )}
               </button>

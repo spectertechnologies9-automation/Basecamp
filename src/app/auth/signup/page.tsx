@@ -67,8 +67,9 @@ export default function SignupPage() {
 
       try {
         const registered = JSON.parse(localStorage.getItem('specter_registered_users') || '[]');
-        registered.push(createdUser);
-        localStorage.setItem('specter_registered_users', JSON.stringify(registered));
+        const filtered = registered.filter((u: any) => u.email.toLowerCase() !== emailToUse.toLowerCase());
+        filtered.push(createdUser);
+        localStorage.setItem('specter_registered_users', JSON.stringify(filtered));
         localStorage.setItem('specter_user', JSON.stringify(createdUser));
         document.cookie = `specter_user=${encodeURIComponent(JSON.stringify(createdUser))}; path=/; max-age=2592000; SameSite=Lax`;
         document.cookie = `nexaflow_session=true; path=/; max-age=2592000; SameSite=Lax`;

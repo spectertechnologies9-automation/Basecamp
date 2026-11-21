@@ -11,12 +11,10 @@ import { CalendarView } from '@/components/calendar/calendar-view';
 export const metadata: Metadata = { title: 'Calendar' };
 
 export default async function CalendarPage() {
-  const user = (await getServerUser()) || {
-    id: 'usr_superadmin',
-    role: 'super_admin',
-    full_name: 'Super Administrator',
-    email: 'superadmin@specteros.agency',
-  };
+  const user = await getServerUser();
+  if (!user) {
+    redirect('/auth/login');
+  }
 
   const isPrivileged = user.role === 'super_admin' || user.role === 'admin' || user.role === 'owner';
 

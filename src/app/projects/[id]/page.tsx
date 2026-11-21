@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { ProjectDashboard } from '@/components/projects/project-dashboard';
@@ -43,15 +44,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProjectPage({ params }: Props) {
+  const user = await getServerUser();
+  if (!user) {
+    redirect('/auth/login');
+  }
   const fallback = { ...DEFAULT_CLEAN_PROJECT, id: params.id };
-  const user = (await getServerUser()) || {
-    id: 'usr_superadmin',
-    organization_id: 'org_default',
-    email: 'superadmin@specteros.agency',
-    full_name: 'Super Administrator',
-    role: 'super_admin',
-    timezone: 'Asia/Kolkata',
-  };
 
   try {
     const project = await queryOne<any>('SELECT * FROM projects WHERE id = ?', [params.id]);

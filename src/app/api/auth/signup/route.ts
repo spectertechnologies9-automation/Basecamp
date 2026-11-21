@@ -51,6 +51,16 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 30,
     });
 
+    res.cookies.set({
+      name: 'specter_user',
+      value: encodeURIComponent(JSON.stringify(user)),
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
     return res;
   } catch (err: any) {
     return NextResponse.json(

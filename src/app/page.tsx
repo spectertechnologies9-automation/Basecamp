@@ -1,5 +1,10 @@
-import { DashboardStaticClient } from '@/components/dashboard/dashboard-static-client';
+import { redirect } from 'next/navigation';
+import { getServerUser } from '@/lib/auth';
 
-export default function RootPage() {
-  return <DashboardStaticClient />;
+export default async function RootPage() {
+  const user = await getServerUser();
+  if (!user) {
+    redirect('/auth/login');
+  }
+  redirect('/dashboard');
 }

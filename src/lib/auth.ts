@@ -37,17 +37,17 @@ export async function getServerUser(): Promise<User | null> {
       }
     }
 
-    // 3. Fall back to demo user so static deployments, previews, and unauthenticated demo sessions always work
-    return DEFAULT_DEMO_USER;
+    // 3. No active session found
+    return null;
   } catch {
-    return DEFAULT_DEMO_USER;
+    return null;
   }
 }
 
 export async function requireAuth(): Promise<User> {
   const user = await getServerUser();
   if (!user) {
-    return DEFAULT_DEMO_USER;
+    throw new Error('Unauthorized');
   }
   return user;
 }

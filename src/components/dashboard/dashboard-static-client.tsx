@@ -1,22 +1,12 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardContent } from './dashboard-content';
 import type { User, Project, AuditLog } from '@/types';
 
 export const STATIC_DASHBOARD_DATA = {
-  user: {
-    id: 'usr_admin',
-    organization_id: 'org_default',
-    email: 'admin@specteros.agency',
-    full_name: 'Workspace Administrator',
-    role: 'admin',
-    timezone: 'Asia/Kolkata',
-    locale: 'en',
-    is_active: true,
-    created_at: '2026-10-22T10:00:00Z',
-    updated_at: '2026-11-20T00:00:00Z',
-  } as User,
+  user: null as unknown as User,
   projects: [] as unknown as Project[],
   members: [] as any[],
   pipelineTodos: [],
@@ -29,33 +19,72 @@ export const STATIC_DASHBOARD_DATA = {
 };
 
 export function DashboardStaticClient() {
-  const [data, setData] = useState(STATIC_DASHBOARD_DATA);
+  const router = useRouter();
+  const [data, setData] = useState(() => {
+    let initialUser: any = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('specter_user');
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u && (u.id || u.email)) initialUser = u;
+        }
+      } catch {}
+    }
+    return {
+      ...STATIC_DASHBOARD_DATA,
+      user: initialUser,
+    };
+  });
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // If a live backend API is available, refresh with real data smoothly
   useEffect(() => {
-    // Check localStorage for logged in user first
+    let resolvedUser = data.user;
+
+    // 1. Check localStorage first
     try {
       const stored = localStorage.getItem('specter_user');
       if (stored) {
         const u = JSON.parse(stored);
-        if (u && u.id) {
+        if (u && (u.id || u.email)) {
+          resolvedUser = u;
           setData((prev) => ({ ...prev, user: u }));
         }
       }
     } catch {}
 
+    // 2. Fetch authenticated profile from API
     fetch('/api/user/profile')
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (r.status === 401) {
+          if (!resolvedUser) {
+            router.push('/auth/login');
+          }
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
       .then((profileRes) => {
-        if (profileRes?.data) {
+        if (profileRes?.data && profileRes.data.id) {
+          resolvedUser = profileRes.data;
           setData((prev) => ({
             ...prev,
-            user: { ...prev.user, ...profileRes.data },
+            user: { ...(prev.user || {}), ...profileRes.data },
           }));
+        } else if (!resolvedUser) {
+          router.push('/auth/login');
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!resolvedUser) {
+          router.push('/auth/login');
+        }
+      })
+      .finally(() => {
+        setAuthChecked(true);
+      });
 
+    // 3. Load projects & members
     fetch('/api/projects')
       .then((r) => (r.ok ? r.json() : null))
       .then((projectsRes) => {
@@ -79,10 +108,31 @@ export function DashboardStaticClient() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [router]);
+
+  if (!data.user && !authChecked) {
+    return (
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center text-zinc-400 font-mono text-xs gap-3">
+        <div className="w-8 h-8 rounded-lg bg-orange-600 text-white font-bold flex items-center justify-center text-sm animate-pulse">
+          S
+        </div>
+        <span>Authenticating session…</span>
+      </div>
+    );
+  }
+
+  if (!data.user && authChecked) {
+    return null;
+  }
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#09090b] flex items-center justify-center text-zinc-500 font-mono text-xs">Loading Specter OS...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#09090b] flex items-center justify-center text-zinc-500 font-mono text-xs">
+          Loading Specter OS...
+        </div>
+      }
+    >
       <DashboardContent
         user={data.user}
         projects={data.projects}

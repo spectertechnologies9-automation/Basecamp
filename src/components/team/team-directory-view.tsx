@@ -26,15 +26,48 @@ export function TeamDirectoryView({ initialMembers }: any) {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Sync with real SQLite database on mount
+  // Sync with real SQLite database on mount + localStorage persistent registry
   useEffect(() => {
     let isMounted = true;
     fetch('/api/team/members')
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
-        if (isMounted && json?.data && Array.isArray(json.data)) {
-          setMembers(json.data);
+        if (!isMounted) return;
+        let list: any[] = [];
+        if (json?.data && Array.isArray(json.data)) {
+          list = json.data;
         }
+
+        // Merge persistent registered users from localStorage
+        try {
+          const stored = localStorage.getItem('specter_registered_users');
+          if (stored) {
+            const registered = JSON.parse(stored);
+            for (const reg of registered) {
+              if (
+                reg.role !== 'super_admin' &&
+                reg.email !== 'superadmin@specteros.agency' &&
+                !list.some((m: any) => m.id === reg.id || m.email?.toLowerCase() === reg.email?.toLowerCase())
+              ) {
+                list.push({
+                  id: reg.id,
+                  full_name: reg.full_name || reg.email.split('@')[0],
+                  email: reg.email,
+                  role: reg.role || 'role_not_assigned',
+                  avatar_url: reg.avatar_url,
+                  is_active: reg.is_active !== false,
+                  contributions: {
+                    tasks_completed: 0,
+                    projects_count: 0,
+                    comments_count: 0,
+                  },
+                });
+              }
+            }
+          }
+        } catch {}
+
+        setMembers(list.filter((m: any) => m.role !== 'super_admin' && m.email !== 'superadmin@specteros.agency'));
       })
       .catch(() => {});
     return () => {
@@ -84,6 +117,20 @@ export function TeamDirectoryView({ initialMembers }: any) {
 
       if (json.data) {
         setMembers((prev) => [...prev, json.data]);
+        try {
+          const stored = localStorage.getItem('specter_registered_users');
+          const reg = stored ? JSON.parse(stored) : [];
+          reg.push({
+            id: json.data.id,
+            full_name: json.data.full_name,
+            email: json.data.email,
+            role: json.data.role,
+            password: password || 'Password123!',
+            is_active: true,
+            created_at: json.data.created_at,
+          });
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        } catch {}
         setFullName('');
         setEmail('');
         setInviteModal(false);
@@ -113,6 +160,13 @@ export function TeamDirectoryView({ initialMembers }: any) {
       }
 
       setMembers((prev) => prev.filter((m) => m.id !== deleteConfirmUser.id));
+      try {
+        const stored = localStorage.getItem('specter_registered_users');
+        if (stored) {
+          const reg = JSON.parse(stored).filter((u: any) => u.id !== deleteConfirmUser.id);
+          localStorage.setItem('specter_registered_users', JSON.stringify(reg));
+        }
+      } catch {}
       setSuccessMsg(`Member ${deleteConfirmUser.full_name} removed`);
       setDeleteConfirmUser(null);
       setTimeout(() => setSuccessMsg(null), 4000);

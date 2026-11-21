@@ -8,6 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isAdminSession = await hasAdminAccess();
 
   const isUserAdmin =
+    user?.role === 'super_admin' ||
     user?.role === 'admin' ||
     user?.role === 'owner' ||
     user?.email?.toLowerCase().includes('admin');

@@ -42,37 +42,36 @@ export default function LoginPage() {
       let id = userObj?.id || 'usr_member';
       let email = userObj?.email || userIdentifier;
 
-      if (!userObj) {
-        if (lower.includes('superadmin') || lower === 'superadmin') {
-          role = 'super_admin';
-          name = 'Super Administrator';
-          id = 'usr_superadmin';
-          email = 'superadmin@specteros.agency';
-        } else if (lower.includes('admin') || lower === 'admin') {
-          role = 'admin';
-          name = 'Workspace Administrator';
-          id = 'usr_admin';
-          email = 'admin@specteros.agency';
-        } else if (lower.includes('client') || lower === 'client') {
-          role = 'client';
-          name = 'Elena Rostova';
-          id = 'usr_client';
-          email = 'client@specteros.agency';
-        } else if (lower.includes('member') || lower === 'member') {
-          role = 'member';
-          name = 'Alex Rivera';
-          id = 'usr_member';
-          email = 'member@specteros.agency';
-        } else {
-          // Check localStorage for registered users
-          const registered = JSON.parse(localStorage.getItem('specter_registered_users') || '[]');
-          const match = registered.find((u: any) => u.email.toLowerCase() === lower || u.username?.toLowerCase() === lower);
-          if (match) {
-            role = match.role || 'member';
-            name = match.full_name;
-            id = match.id;
-            email = match.email;
-          }
+      // Seed account resolution guarantees proper roles and identities
+      if (lower === 'superadmin' || lower === 'superadmin@specteros.agency' || lower === 'super_admin' || id === 'usr_superadmin' || userObj?.email === 'superadmin@specteros.agency') {
+        role = 'super_admin';
+        name = userObj?.full_name || 'Super Administrator';
+        id = 'usr_superadmin';
+        email = 'superadmin@specteros.agency';
+      } else if (lower === 'admin' || lower === 'admin@specteros.agency' || lower === 'administrator' || id === 'usr_admin' || userObj?.email === 'admin@specteros.agency') {
+        role = 'admin';
+        name = userObj?.full_name || 'Workspace Administrator';
+        id = 'usr_admin';
+        email = 'admin@specteros.agency';
+      } else if (lower === 'client' || lower === 'client@specteros.agency' || id === 'usr_client' || userObj?.email === 'client@specteros.agency') {
+        role = 'client';
+        name = userObj?.full_name || 'Elena Rostova';
+        id = 'usr_client';
+        email = 'client@specteros.agency';
+      } else if (lower === 'member' || lower === 'member@specteros.agency' || id === 'usr_member' || userObj?.email === 'member@specteros.agency') {
+        role = 'member';
+        name = userObj?.full_name || 'Alex Rivera';
+        id = 'usr_member';
+        email = 'member@specteros.agency';
+      } else if (!userObj) {
+        // Check localStorage for registered users
+        const registered = JSON.parse(localStorage.getItem('specter_registered_users') || '[]');
+        const match = registered.find((u: any) => u.email.toLowerCase() === lower || u.username?.toLowerCase() === lower);
+        if (match) {
+          role = match.role || 'member';
+          name = match.full_name;
+          id = match.id;
+          email = match.email;
         }
       }
 
@@ -104,21 +103,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setError(null);
-
-    // Standard seed accounts authenticate immediately for instantaneous zero-error login
     const lower = data.email.toLowerCase().trim();
-    const isKnownSeed = ['superadmin', 'admin', 'member', 'client'].some(k => lower.includes(k));
-    if (isKnownSeed) {
-      performLoginSuccess(data.email);
-      try {
-        fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-      } catch {}
-      return;
-    }
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -130,7 +115,7 @@ export default function LoginPage() {
       const json = await res.json().catch(() => ({}));
 
       // If backend exists and responds 200
-      if (res.ok) {
+      if (res.ok && json.user) {
         performLoginSuccess(data.email, json.user);
         return;
       }
@@ -149,16 +134,50 @@ export default function LoginPage() {
         return;
       }
 
-      // If 404/405/offline (static hosting)
-      if (res.status === 404 || res.status === 405 || !res.status) {
+      // Standard seed accounts fallback
+      const SEED_EMAILS = [
+        'superadmin@specteros.agency',
+        'superadmin',
+        'super_admin',
+        'admin@specteros.agency',
+        'admin',
+        'member@specteros.agency',
+        'member',
+        'client@specteros.agency',
+        'client',
+      ];
+      if (SEED_EMAILS.includes(lower) && data.password.length >= 1) {
         performLoginSuccess(data.email);
         return;
       }
 
       setError(json.error || 'Invalid username or password.');
     } catch {
-      // In static deployment or network drop, proceed with client authentication
-      performLoginSuccess(data.email);
+      // In network drop or offline, check registered or seed accounts
+      const registered = JSON.parse(localStorage.getItem('specter_registered_users') || '[]');
+      const match = registered.find((u: any) => u.email.toLowerCase() === lower || u.username?.toLowerCase() === lower);
+      if (match && (match.password === data.password || data.password.length >= 4)) {
+        performLoginSuccess(match.email, match);
+        return;
+      }
+
+      const SEED_EMAILS = [
+        'superadmin@specteros.agency',
+        'superadmin',
+        'super_admin',
+        'admin@specteros.agency',
+        'admin',
+        'member@specteros.agency',
+        'member',
+        'client@specteros.agency',
+        'client',
+      ];
+      if (SEED_EMAILS.includes(lower) && data.password.length >= 1) {
+        performLoginSuccess(data.email);
+        return;
+      }
+
+      setError('Network error signing in. Please check your connection.');
     }
   };
 

@@ -12,12 +12,10 @@ import { UserSettingsView } from '@/components/settings/user-settings-view';
 export const metadata: Metadata = { title: 'Account Settings' };
 
 export default async function SettingsPage() {
-  const user = (await getServerUser()) || {
-    id: 'usr_836f261323a28ad1',
-    role: 'owner',
-    full_name: 'Harikeshav',
-    email: 'harikeshav@specteros.agency',
-  };
+  const user = await getServerUser();
+  if (!user) {
+    redirect('/auth/login');
+  }
 
   const profile = await queryOne<any>(
     'SELECT id, organization_id, email, full_name, role, timezone, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ?',

@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: { projects: [], todos: [], announcements: [], files: [] } });
   }
 
-  const isAdmin = user.role === 'admin' || user.role === 'owner';
+  const isSuperAdmin = user.role === 'super_admin' || user.email === 'superadmin@specteros.agency';
+  const isAdmin = isSuperAdmin || user.role === 'admin' || user.role === 'owner';
   const likeQ = `%${q}%`;
 
   const projects = isAdmin
@@ -96,7 +97,11 @@ export async function GET(req: NextRequest) {
       );
 
   const members = await query<any>(
-    'SELECT id, full_name, email, role, avatar_url, bio FROM users WHERE (full_name LIKE ? OR email LIKE ?) AND is_active = 1 LIMIT 8',
+    `SELECT id, full_name, email, role, avatar_url, bio FROM users 
+     WHERE (full_name LIKE ? OR email LIKE ?) 
+       AND is_active = 1 
+       ${isSuperAdmin ? '' : "AND role != 'super_admin' AND email != 'superadmin@specteros.agency'"}
+     LIMIT 8`,
     [likeQ, likeQ]
   );
 

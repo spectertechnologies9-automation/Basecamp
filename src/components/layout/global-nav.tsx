@@ -62,6 +62,7 @@ export function GlobalNav() {
   }, []);
 
   const isAdmin =
+    currentUser?.role === 'super_admin' ||
     currentUser?.role === 'admin' ||
     currentUser?.role === 'owner' ||
     currentUser?.email?.includes('admin');
